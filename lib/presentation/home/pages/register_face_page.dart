@@ -359,7 +359,7 @@ class _RegisterFacePageState extends State<RegisterFacePage> {
           children: [
             // Camera View
             CameraViewAttendancePage(
-              title: 'Register Face',
+              title: 'Daftar Wajah',
               customPaint: _customPaint,
               onImage: _processImage,
               initialCameraLensDirection: _cameraLensDirection,
@@ -431,7 +431,7 @@ class _RegisterFacePageState extends State<RegisterFacePage> {
                 ),
                 const SpaceWidth(12),
                 Text(
-                  'Capture Face',
+                  'Ambil Foto Wajah',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

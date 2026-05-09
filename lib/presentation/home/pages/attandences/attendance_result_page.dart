@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_absensi_app/core/helper/radius_calculate.dart';
+import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/checkout_attendance/checkout_attendance_bloc.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/get_company/get_company_bloc.dart';
 import 'package:flutter_absensi_app/presentation/home/pages/attandences/scanner_page.dart';
@@ -44,6 +45,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
   String? locationError;
   bool isWithinRadius = false;
   double distance = 0.0;
+  String workMode = '-';
 
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
@@ -63,6 +65,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
 
     // Get company data to validate radius
     context.read<GetCompanyBloc>().add(const GetCompanyEvent.getCompany());
+    _loadWorkMode();
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -84,6 +87,18 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
     );
 
     _animationController.forward();
+  }
+
+  Future<void> _loadWorkMode() async {
+    final authData = await AuthLocalDatasource().getAuthData();
+    if (!mounted) return;
+
+    setState(() {
+      workMode = _formatWorkMode(authData?.user?.workMode ?? authData?.workMode);
+    });
+
+    // Re-validate radius now that work mode is known
+    _validateRadius();
   }
 
   @override
@@ -111,7 +126,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
         if (!serviceEnabled) {
           setState(() {
             isLoadingLocation = false;
-            locationError = 'Location service is disabled';
+            locationError = 'Layanan lokasi tidak aktif';
           });
           return;
         }
@@ -123,7 +138,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
         if (permissionGranted != PermissionStatus.granted) {
           setState(() {
             isLoadingLocation = false;
-            locationError = 'Location permission denied';
+            locationError = 'Izin lokasi ditolak';
           });
           return;
         }
@@ -142,7 +157,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
     } on PlatformException catch (e) {
       setState(() {
         isLoadingLocation = false;
-        locationError = e.message ?? 'Failed to get location';
+        locationError = e.message ?? 'Gagal mendapatkan lokasi';
       });
       if (e.code == 'IO_ERROR') {
         debugPrint(
@@ -153,10 +168,15 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
     } catch (e) {
       setState(() {
         isLoadingLocation = false;
-        locationError = 'An unknown error occurred';
+        locationError = 'Terjadi kesalahan yang tidak diketahui';
       });
       debugPrint('An unknown error occurred: $e');
     }
+  }
+
+  bool _isRemoteWorkMode() {
+    final normalized = workMode.toLowerCase();
+    return normalized == 'wfh' || normalized == 'wfa' || normalized == 'remote';
   }
 
   void _validateRadius() {
@@ -168,7 +188,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
           final companyLong = double.tryParse(company.longitude ?? '0') ?? 0.0;
           final radiusKm = double.tryParse(company.radiusKm ?? '0') ?? 0.0;
 
-          distance = RadiusCalculate.calculateDistance(
+          final calculatedDistance = RadiusCalculate.calculateDistance(
             latitude!,
             longitude!,
             companyLat,
@@ -176,16 +196,20 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
           );
 
           setState(() {
-            isWithinRadius = distance <= radiusKm;
+            distance = calculatedDistance;
+            // WFH/WFA bebas lokasi, tapi jarak tetap dihitung untuk ditampilkan
+            isWithinRadius = _isRemoteWorkMode()
+                ? true
+                : calculatedDistance <= radiusKm;
           });
 
           debugPrint(
-              'Distance: $distance km, Radius: $radiusKm km, Within: $isWithinRadius');
+              'Distance: $calculatedDistance km, Radius: $radiusKm km, Within: $isWithinRadius, Remote: ${_isRemoteWorkMode()}');
         }
       },
       orElse: () {
         setState(() {
-          isWithinRadius = false;
+          isWithinRadius = _isRemoteWorkMode();
         });
       },
     );
@@ -195,16 +219,42 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
     switch (widget.attendanceType.toLowerCase()) {
       case 'face':
       case 'face_recognition_only':
-        return 'Face Recognition';
+        return 'Pengenalan Wajah';
       case 'qr':
       case 'qr_code_only':
-        return 'QR Code';
+        return 'Kode QR';
       case 'location_based_only':
-        return 'Location Based';
+        return 'Berbasis Lokasi';
       case 'hybrid':
         return 'Hybrid';
       default:
         return 'Manual';
+    }
+  }
+
+  String _formatWorkMode(String? value) {
+    final rawValue = value?.trim();
+    if (rawValue == null || rawValue.isEmpty) return '-';
+
+    switch (rawValue.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_')) {
+      case 'wfo':
+      case 'office':
+      case 'work_from_office':
+        return 'WFO';
+      case 'wfh':
+      case 'remote':
+      case 'work_from_home':
+        return 'WFH';
+      case 'hybrid':
+        return 'Hybrid';
+      default:
+        return rawValue
+            .split(RegExp(r'[_\s-]+'))
+            .where((word) => word.isNotEmpty)
+            .map((word) => word.length == 1
+                ? word.toUpperCase()
+                : '${word[0].toUpperCase()}${word.substring(1)}')
+            .join(' ');
     }
   }
 
@@ -289,7 +339,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.isCheckin ? 'Check In' : 'Check Out',
+                  widget.isCheckin ? 'Absen Masuk' : 'Absen Pulang',
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -659,6 +709,12 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
             label: 'Longitude',
             value: longitude?.toStringAsFixed(6) ?? '-',
           ),
+          const SpaceHeight(12),
+          _buildLocationRow(
+            icon: Icons.work_outline_rounded,
+            label: 'Mode Kerja',
+            value: workMode,
+          ),
         ],
       ),
     );
@@ -800,7 +856,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
               const SpaceWidth(12),
               Expanded(
                 child: Text(
-                  'Konfirmasi ${isCheckin ? "Check-In" : "Check-Out"}',
+                  'Konfirmasi ${isCheckin ? "Absen Masuk" : "Absen Pulang"}',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -814,7 +870,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Apakah Anda yakin ingin melanjutkan ${isCheckin ? "check-in" : "check-out"}?',
+                'Apakah Anda yakin ingin melanjutkan ${isCheckin ? "absen masuk" : "absen pulang"}?',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey[700],
@@ -835,21 +891,30 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
                     _buildConfirmationInfoRow(
                       icon: Icons.location_on_rounded,
                       label: 'Lokasi',
-                      value: 'Terverifikasi',
+                      value: _isRemoteWorkMode()
+                          ? 'Bebas ($workMode)'
+                          : 'Terverifikasi',
                       color: Colors.green,
                     ),
                     const SpaceHeight(8),
                     _buildConfirmationInfoRow(
+                      icon: Icons.work_outline_rounded,
+                      label: 'Mode Kerja',
+                      value: workMode,
+                      color: Colors.indigo,
+                    ),
+                    const SpaceHeight(8),
+                    _buildConfirmationInfoRow(
                       icon: Icons.straighten_rounded,
-                      label: 'Jarak',
+                      label: 'Jarak ke Kantor',
                       value: '${distance.toStringAsFixed(2)} km',
-                      color: Colors.blue,
+                      color: _isRemoteWorkMode() ? Colors.grey : Colors.blue,
                     ),
                     const SpaceHeight(8),
                     _buildConfirmationInfoRow(
                       icon: Icons.schedule_rounded,
                       label: 'Waktu',
-                      value: DateFormat('dd MMM yyyy, HH:mm:ss')
+                      value: DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID')
                           .format(DateTime.now()),
                       color: Colors.orange,
                     ),
@@ -1029,7 +1094,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
                           ),
                           const SpaceWidth(8),
                           Text(
-                            'Lanjutkan Check-In',
+                            'Lanjutkan Absen Masuk',
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -1136,7 +1201,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
                           ),
                           const SpaceWidth(8),
                           Text(
-                            'Lanjutkan Check-Out',
+                            'Lanjutkan Absen Pulang',
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -1231,7 +1296,7 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
         ),
         icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
         label: Text(
-          'Scan QR Code Lagi',
+          'Pindai QR Code Lagi',
           style: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.w600,

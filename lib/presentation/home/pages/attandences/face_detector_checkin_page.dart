@@ -599,7 +599,7 @@ class _FaceDetectorViewState extends State<FaceDetectorCheckinPage> {
             onPressed: () {
               Navigator.of(context).pop();
             },
-            label: 'Proses Check In',
+            label: 'Proses Absen Masuk',
           ),
         ],
       ),
@@ -822,7 +822,7 @@ class _FaceDetectorViewState extends State<FaceDetectorCheckinPage> {
                           ),
                           const SpaceWidth(8),
                           Text(
-                            'Lanjutkan Check-In',
+                            'Lanjutkan Absen Masuk',
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -924,7 +924,7 @@ class _FaceDetectorViewState extends State<FaceDetectorCheckinPage> {
                           ),
                           const SpaceWidth(8),
                           Text(
-                            'Lanjutkan Check-Out',
+                            'Lanjutkan Absen Pulang',
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

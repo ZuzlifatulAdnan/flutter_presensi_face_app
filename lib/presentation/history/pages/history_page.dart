@@ -122,7 +122,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 ),
                 Text(
                   _selectedDate != null
-                      ? DateFormat('dd MMMM yyyy').format(_selectedDate!)
+                      ? DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)
                       : 'Lacak catatan kehadiran harian Anda',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
@@ -338,7 +338,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 ),
                 const SpaceHeight(8),
                 Text(
-                  'Tidak ditemukan catatan kehadiran untuk ${DateFormat('dd MMMM yyyy').format(_selectedDate!)}',
+                  'Tidak ditemukan catatan kehadiran untuk ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.8),
@@ -413,11 +413,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildAttendanceList(List<Attendance> attendances) {
-    // Filter out weekends and holidays
-    var filteredAttendances = attendances
-        .where((attendance) =>
-            attendance.isWeekend != true && attendance.isHoliday != true)
-        .toList();
+    var filteredAttendances = List<Attendance>.from(attendances);
 
     // Filter by selected date if any
     if (_selectedDate != null) {
@@ -467,7 +463,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildAttendanceCard(Attendance attendance) {
-    final dateFormatter = DateFormat('EEE, dd MMM yyyy');
+    final dateFormatter = DateFormat('EEEE, dd MMMM yyyy', 'id_ID');
     final timeFormatter = DateFormat('HH:mm');
     final statusColor = _getStatusColor(attendance.status);
     final statusLabel = _getStatusLabel(attendance.status);
@@ -630,6 +626,15 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
             ],
           ),
+          if ((attendance.workMode ?? '').trim().isNotEmpty) ...[
+            const SpaceHeight(12),
+            _buildMetaInfo(
+              'Mode Kerja',
+              _formatWorkMode(attendance.workMode),
+              Icons.work_outline_rounded,
+              Colors.indigo,
+            ),
+          ],
 
           // Late/Early Leave Info
           if ((attendance.lateMinutes ?? 0) > 0 ||
@@ -774,6 +779,74 @@ class _HistoryPageState extends State<HistoryPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildMetaInfo(
+      String label, String value, IconData icon, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 18,
+          ),
+          const SpaceWidth(10),
+          Text(
+            '$label: ',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: color.withOpacity(0.7),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatWorkMode(String? value) {
+    final rawValue = value?.trim();
+    if (rawValue == null || rawValue.isEmpty) return '-';
+
+    switch (rawValue.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_')) {
+      case 'wfo':
+      case 'office':
+      case 'work_from_office':
+        return 'WFO';
+      case 'wfh':
+      case 'remote':
+      case 'work_from_home':
+        return 'WFH';
+      case 'hybrid':
+        return 'Hybrid';
+      default:
+        return rawValue
+            .split(RegExp(r'[_\s-]+'))
+            .where((word) => word.isNotEmpty)
+            .map((word) => word.length == 1
+                ? word.toUpperCase()
+                : '${word[0].toUpperCase()}${word.substring(1)}')
+            .join(' ');
+    }
   }
 
   Color _getStatusColor(String? status) {

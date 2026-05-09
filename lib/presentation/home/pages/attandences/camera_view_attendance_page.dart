@@ -331,7 +331,7 @@ class _CameraViewState extends State<CameraViewAttendancePage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _canTakePicture ? 'Perfect!' : 'Face Detection',
+                              _canTakePicture ? 'Sempurna!' : 'Deteksi Wajah',
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -357,7 +357,7 @@ class _CameraViewState extends State<CameraViewAttendancePage>
                       children: [
                         _buildStepIndicator(
                           step: 1,
-                          title: 'Center Face',
+                          title: 'Hadap Depan',
                           isCompleted: true,
                           isActive: !_isHeadTurnedRight,
                         ),
@@ -376,7 +376,7 @@ class _CameraViewState extends State<CameraViewAttendancePage>
                         const SpaceWidth(8),
                         _buildStepIndicator(
                           step: 2,
-                          title: 'Turn Right',
+                          title: 'Tengok Kanan',
                           isCompleted: _isHeadTurnedRight && _canTakePicture,
                           isActive: _isHeadTurnedRight,
                         ),

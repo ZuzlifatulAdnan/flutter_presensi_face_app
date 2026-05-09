@@ -222,11 +222,12 @@ class _ProfilePageState extends State<ProfilePage>
           // Logout Button
           BlocConsumer<LogoutBloc, LogoutState>(
             listener: (context, state) {
-              state.maybeMap(
-                orElse: () {
+              state.maybeWhen(
+                success: () {
                   AuthLocalDatasource().removeAuthData();
                   context.pushReplacement(const LoginPage());
                 },
+                orElse: () {},
               );
             },
             builder: (context, state) {
@@ -279,7 +280,7 @@ class _ProfilePageState extends State<ProfilePage>
           ),
           const SpaceHeight(16),
           Text(
-            'Loading profile...',
+            'Memuat profil...',
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: Colors.grey[600],
@@ -560,7 +561,7 @@ class _ProfilePageState extends State<ProfilePage>
                                 ),
                                 const SpaceWidth(8),
                                 Text(
-                                  'Edit Profile',
+                                  'Edit Profil',
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -672,7 +673,7 @@ class _ProfilePageState extends State<ProfilePage>
               ),
               const SpaceHeight(16),
               Text(
-                'Confirm Logout',
+                'Konfirmasi Keluar',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -682,7 +683,7 @@ class _ProfilePageState extends State<ProfilePage>
               ),
               const SpaceHeight(8),
               Text(
-                'Are you sure you want to logout from your account?',
+                'Apakah Anda yakin ingin keluar dari akun ini?',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -710,7 +711,7 @@ class _ProfilePageState extends State<ProfilePage>
                           onTap: () => Navigator.pop(context),
                           child: Center(
                             child: Text(
-                              'Cancel',
+                              'Batal',
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -742,7 +743,7 @@ class _ProfilePageState extends State<ProfilePage>
                           },
                           child: Center(
                             child: Text(
-                              'Logout',
+                              'Keluar',
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

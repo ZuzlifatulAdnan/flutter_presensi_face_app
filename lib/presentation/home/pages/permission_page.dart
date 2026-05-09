@@ -184,7 +184,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Permission Form',
+                                      'Formulir Izin',
                                       style: GoogleFonts.poppins(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w600,
@@ -208,7 +208,7 @@ class _PermissionPageState extends State<PermissionPage> {
 
                           // Date Picker Section
                           _buildFormSection(
-                            title: 'Permission Date',
+                            title: 'Tanggal Izin',
                             icon: Icons.calendar_today_rounded,
                             child: Container(
                               decoration: BoxDecoration(
@@ -507,7 +507,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                               ),
                                               const SpaceWidth(8),
                                               Text(
-                                                'Submit Request',
+                                                'Kirim Permintaan',
                                                 style: GoogleFonts.poppins(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w600,
@@ -546,7 +546,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                         ),
                                         const SpaceWidth(12),
                                         Text(
-                                          'Submitting Request...',
+                                          'Mengirim Permintaan...',
                                           style: GoogleFonts.poppins(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,

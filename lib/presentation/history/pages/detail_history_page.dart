@@ -368,6 +368,17 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                                   ),
                                 ],
                               ),
+                              if ((widget.attendance.workMode ?? '')
+                                  .trim()
+                                  .isNotEmpty) ...[
+                                const SpaceHeight(12),
+                                _buildCompactInfoChip(
+                                  'Mode Kerja',
+                                  _formatWorkMode(widget.attendance.workMode),
+                                  Icons.work_outline_rounded,
+                                  Colors.indigo,
+                                ),
+                              ],
                               // Late/Early Leave Info (compact)
                               if ((widget.attendance.lateMinutes ?? 0) > 0 ||
                                   (widget.attendance.earlyLeaveMinutes ?? 0) > 0) ...[
@@ -707,6 +718,32 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
         ),
       ],
     );
+  }
+
+  String _formatWorkMode(String? value) {
+    final rawValue = value?.trim();
+    if (rawValue == null || rawValue.isEmpty) return '-';
+
+    switch (rawValue.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_')) {
+      case 'wfo':
+      case 'office':
+      case 'work_from_office':
+        return 'WFO';
+      case 'wfh':
+      case 'remote':
+      case 'work_from_home':
+        return 'WFH';
+      case 'hybrid':
+        return 'Hybrid';
+      default:
+        return rawValue
+            .split(RegExp(r'[_\s-]+'))
+            .where((word) => word.isNotEmpty)
+            .map((word) => word.length == 1
+                ? word.toUpperCase()
+                : '${word[0].toUpperCase()}${word.substring(1)}')
+            .join(' ');
+    }
   }
 
   Color _getStatusColor(String? status) {

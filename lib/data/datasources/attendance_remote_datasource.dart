@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_absensi_app/core/constants/variables.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/data/models/request/checkinout_request_model.dart';
@@ -56,20 +57,36 @@ class AttendanceRemoteDatasource {
       CheckInOutRequestModel data) async {
     final authData = await AuthLocalDatasource().getAuthData();
     final url = Uri.parse('${Variables.baseUrl}/api/checkin');
-    final response = await http.post(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${authData?.token}',
-      },
-      body: data.toJson(),
-    );
+    try {
+      final body = <String, String>{
+        'latitude': data.latitude ?? '0',
+        'longitude': data.longitude ?? '0',
+        if (data.workMode != null) 'work_mode': data.workMode!,
+      };
+      debugPrint('[CHECKIN] URL: $url');
+      debugPrint('[CHECKIN] Body: $body');
 
-    if (response.statusCode == 200) {
-      return Right(CheckInOutResponseModel.fromJson(response.body));
-    } else {
-      return const Left('Failed to checkin');
+      final response = await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${authData?.token}',
+        },
+        body: body,
+      );
+
+      debugPrint('[CHECKIN] Status: ${response.statusCode}');
+      debugPrint('[CHECKIN] Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Right(CheckInOutResponseModel.fromJson(response.body));
+      } else {
+        return Left(_parseErrorMessage(response.body, response.statusCode,
+            'Gagal melakukan absen masuk'));
+      }
+    } catch (e) {
+      debugPrint('[CHECKIN] Exception: $e');
+      return Left('Gagal terhubung ke server: $e');
     }
   }
 
@@ -77,21 +94,56 @@ class AttendanceRemoteDatasource {
       CheckInOutRequestModel data) async {
     final authData = await AuthLocalDatasource().getAuthData();
     final url = Uri.parse('${Variables.baseUrl}/api/checkout');
-    final response = await http.post(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${authData?.token}',
-      },
-      body: data.toJson(),
-    );
+    try {
+      final body = <String, String>{
+        'latitude': data.latitude ?? '0',
+        'longitude': data.longitude ?? '0',
+        if (data.workMode != null) 'work_mode': data.workMode!,
+      };
+      debugPrint('[CHECKOUT] URL: $url');
+      debugPrint('[CHECKOUT] Body: $body');
 
-    if (response.statusCode == 200) {
-      return Right(CheckInOutResponseModel.fromJson(response.body));
-    } else {
-      return const Left('Failed to checkin');
+      final response = await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${authData?.token}',
+        },
+        body: body,
+      );
+
+      debugPrint('[CHECKOUT] Status: ${response.statusCode}');
+      debugPrint('[CHECKOUT] Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Right(CheckInOutResponseModel.fromJson(response.body));
+      } else {
+        return Left(_parseErrorMessage(response.body, response.statusCode,
+            'Gagal melakukan absen pulang'));
+      }
+    } catch (e) {
+      debugPrint('[CHECKOUT] Exception: $e');
+      return Left('Gagal terhubung ke server: $e');
     }
+  }
+
+  String _parseErrorMessage(String body, int statusCode, String fallback) {
+    try {
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      final msg = decoded['message'] ??
+          decoded['error'] ??
+          decoded['msg'];
+      if (msg != null) return msg.toString();
+      // Laravel validation errors
+      final errors = decoded['errors'];
+      if (errors is Map) {
+        final firstField = errors.values.first;
+        if (firstField is List && firstField.isNotEmpty) {
+          return firstField.first.toString();
+        }
+      }
+    } catch (_) {}
+    return '$fallback (kode: $statusCode)';
   }
 
   Future<Either<String, AttendanceResponseModel>> getAttendance(
@@ -118,24 +170,30 @@ class AttendanceRemoteDatasource {
   Future<Either<String, AttendanceResponseModel>> getAllAttendances() async {
     final authData = await AuthLocalDatasource().getAuthData();
     final url = Uri.parse('${Variables.baseUrl}/api/api-attendances');
-    final response = await http.get(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${authData?.token}',
-      },
-    );
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${authData?.token}',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      return Right(AttendanceResponseModel.fromJson(response.body));
-    } else {
-      try {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return Left(decoded['message']?.toString() ?? 'Failed to get attendances');
-      } catch (_) {
-        return const Left('Failed to get attendances');
+      debugPrint('[ATTENDANCES] Status: ${response.statusCode}');
+      debugPrint('[ATTENDANCES] Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final model = AttendanceResponseModel.fromJson(response.body);
+        debugPrint('[ATTENDANCES] Total data: ${model.data?.length ?? 0}');
+        return Right(model);
+      } else {
+        return Left(_parseErrorMessage(
+            response.body, response.statusCode, 'Gagal mengambil riwayat'));
       }
+    } catch (e) {
+      debugPrint('[ATTENDANCES] Exception: $e');
+      return Left('Gagal terhubung ke server: $e');
     }
   }
 }

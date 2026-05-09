@@ -60,7 +60,7 @@ class Company {
         address: json["address"],
         latitude: json["latitude"],
         longitude: json["longitude"],
-        radiusKm: json["radius_km"],
+        radiusKm: json["radius_km"]?.toString(),
         timeIn: json["time_in"],
         timeOut: json["time_out"],
         attendanceType: json["attendance_type"],

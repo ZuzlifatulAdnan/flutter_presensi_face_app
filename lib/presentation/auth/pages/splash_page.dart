@@ -78,6 +78,8 @@ class _SplashPageState extends State<SplashPage>
     Future.delayed(const Duration(milliseconds: 700), () {
       _slideController.forward();
     });
+
+    _checkAuthAndNavigate();
   }
 
   @override
@@ -103,8 +105,6 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
-    _checkAuthAndNavigate();
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -169,7 +169,7 @@ class _SplashPageState extends State<SplashPage>
               child: Column(
                 children: [
                   Text(
-                    'Absensi',
+                    'Absen Devtech KI',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 42,
@@ -179,7 +179,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                   const SpaceHeight(8),
                   Text(
-                    'Tim SPBE',
+                    'Devtech',
                     style: GoogleFonts.poppins(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 18,
@@ -197,12 +197,16 @@ class _SplashPageState extends State<SplashPage>
                     ),
                   ),
                   const SpaceHeight(16),
-                  Text(
-                    'Dinas Komunikasi dan Informatika Pringsewu',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Dinas Komunikasi dan Informatika Pringsewu',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
@@ -234,7 +238,7 @@ class _SplashPageState extends State<SplashPage>
                 ),
                 const SpaceHeight(24),
                 Text(
-                  'Loading...',
+                  'Memuat...',
                   style: GoogleFonts.poppins(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 14,

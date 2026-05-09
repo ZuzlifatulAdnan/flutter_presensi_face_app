@@ -39,6 +39,7 @@ class Attendance {
   final String? timeOut;
   final String? latlonIn;
   final String? latlonOut;
+  final String? workMode;
   final String? status;
   final bool? isWeekend;
   final bool? isHoliday;
@@ -57,6 +58,7 @@ class Attendance {
     this.timeOut,
     this.latlonIn,
     this.latlonOut,
+    this.workMode,
     this.status,
     this.isWeekend,
     this.isHoliday,
@@ -81,6 +83,7 @@ class Attendance {
         timeOut: json["time_out"],
         latlonIn: json["latlon_in"],
         latlonOut: json["latlon_out"],
+        workMode: json["work_mode"],
         status: json["status"],
         isWeekend: json["is_weekend"],
         isHoliday: json["is_holiday"],
@@ -105,6 +108,7 @@ class Attendance {
         "time_out": timeOut,
         "latlon_in": latlonIn,
         "latlon_out": latlonOut,
+        "work_mode": workMode,
         "status": status,
         "is_weekend": isWeekend,
         "is_holiday": isHoliday,

@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_absensi_app/core/helper/radius_calculate.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
+import 'package:flutter_absensi_app/data/models/response/auth_response_model.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/get_company/get_company_bloc.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/is_checkedin/is_checkedin_bloc.dart';
 import 'package:flutter_absensi_app/presentation/home/pages/attandences/face_detector_checkin_page.dart';
@@ -29,6 +33,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String? faceEmbedding;
   double? latitude;
   double? longitude;
+  String? _currentLocationAddress;
+  String _userWorkMode = '';
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -50,6 +56,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     context.read<GetUserBloc>().add(const GetUserEvent.getUser());
 
     getCurrentPosition();
+    _loadUserWorkMode();
     _startAnimations();
   }
 
@@ -144,6 +151,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       locationData = await location.getLocation();
       latitude = locationData.latitude;
       longitude = locationData.longitude;
+      if (latitude != null && longitude != null) {
+        _currentLocationAddress =
+            await _getAddressFromCoordinates(latitude!, longitude!);
+      }
       setState(() {});
     } on PlatformException catch (e) {
       if (e.code == 'IO_ERROR') {
@@ -154,6 +165,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } catch (e) {
       debugPrint('Unknown error occurred: $e');
     }
+  }
+
+  Future<String?> _getAddressFromCoordinates(
+      double lat, double lon) async {
+    try {
+      final url = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&addressdetails=1');
+      final response = await http.get(url, headers: {'User-Agent': 'FlutterAbsensiApp/1.0'});
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final address = data['address'];
+        final parts = <String>[];
+        if (address['road'] != null) parts.add(address['road']);
+        if (address['suburb'] != null || address['village'] != null) {
+          parts.add(address['suburb'] ?? address['village'] ?? address['hamlet']);
+        }
+        if (address['city'] != null || address['town'] != null || address['city_district'] != null) {
+          parts.add(address['city'] ?? address['town'] ?? address['city_district']);
+        }
+        if (address['state'] != null) parts.add(address['state']);
+        if (parts.isNotEmpty) return parts.join(', ');
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _initializeFaceEmbedding() async {
@@ -170,6 +205,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _loadUserWorkMode() async {
+    final authData = await AuthLocalDatasource().getAuthData();
+    if (!mounted) return;
+    setState(() {
+      _userWorkMode = authData?.user?.workMode ?? authData?.workMode ?? '';
+    });
+  }
+
+  bool _isRemoteWorkMode() {
+    final normalized = _userWorkMode.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+    return normalized == 'wfh' ||
+        normalized == 'wfa' ||
+        normalized == 'remote' ||
+        normalized == 'work_from_home';
+  }
+
   Future<void> _onRefresh() async {
     // Refresh all data
     context.read<GetUserBloc>().add(const GetUserEvent.getUser());
@@ -178,6 +229,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // Refresh face embedding
     await _initializeFaceEmbedding();
+    await _loadUserWorkMode();
+    await getCurrentPosition();
 
     // Wait a bit for the blocs to process
     await Future.delayed(const Duration(milliseconds: 500));
@@ -185,6 +238,95 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  String _formatShiftTime(String? value, String fallback) {
+    if (value == null || value.trim().isEmpty) return fallback;
+
+    final rawValue = value.trim();
+    final parsedDate = DateTime.tryParse(rawValue);
+    if (parsedDate != null) {
+      final localDate = parsedDate.toLocal();
+      return '${localDate.hour.toString().padLeft(2, '0')}:'
+          '${localDate.minute.toString().padLeft(2, '0')}';
+    }
+
+    final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(rawValue);
+    if (timeMatch != null) {
+      final hour = timeMatch.group(1)!.padLeft(2, '0');
+      final minute = timeMatch.group(2)!;
+      return '$hour:$minute';
+    }
+
+    return fallback;
+  }
+
+  String _formatRole(String? value) {
+    final raw = value?.trim().toLowerCase() ?? '';
+    switch (raw) {
+      case 'employee':
+      case 'karyawan':
+        return 'Karyawan';
+      case 'admin':
+        return 'Admin';
+      case 'manager':
+      case 'manajer':
+        return 'Manajer';
+      case 'supervisor':
+        return 'Supervisor';
+      case 'director':
+      case 'direktur':
+        return 'Direktur';
+      case 'staff':
+        return 'Staf';
+      default:
+        if (raw.isEmpty) return '-';
+        return '${raw[0].toUpperCase()}${raw.substring(1)}';
+    }
+  }
+
+  String _formatWorkMode(String? value) {
+    final rawValue = value?.trim();
+    if (rawValue == null || rawValue.isEmpty) return '-';
+
+    switch (rawValue.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_')) {
+      case 'wfo':
+      case 'office':
+      case 'work_from_office':
+        return 'WFO';
+      case 'wfh':
+      case 'remote':
+      case 'work_from_home':
+        return 'WFH';
+      case 'hybrid':
+        return 'Hybrid';
+      default:
+        return rawValue
+            .split(RegExp(r'[_\s-]+'))
+            .where((word) => word.isNotEmpty)
+            .map((word) => word.length == 1
+                ? word.toUpperCase()
+                : '${word[0].toUpperCase()}${word.substring(1)}')
+            .join(' ');
+    }
+  }
+
+  String _formatAttendanceLocation(String? address) {
+    final trimmedAddress = address?.trim();
+    if (trimmedAddress != null && trimmedAddress.isNotEmpty) {
+      return trimmedAddress;
+    }
+
+    if (_currentLocationAddress != null && _currentLocationAddress!.isNotEmpty) {
+      return _currentLocationAddress!;
+    }
+
+    if (latitude != null && longitude != null) {
+      return '${latitude!.toStringAsFixed(6)}, '
+          '${longitude!.toStringAsFixed(6)}';
+    }
+
+    return 'Belum tersedia';
   }
 
   @override
@@ -269,288 +411,208 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildHeader() {
-    return FutureBuilder(
+    return FutureBuilder<AuthResponseModel?>(
       future: AuthLocalDatasource().getAuthData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildLoadingHeader();
         }
 
-        if (!snapshot.hasData || snapshot.data == null) {
-          return _buildFallbackHeader();
-        }
+        final authData = snapshot.data;
 
-        final authData = snapshot.data!;
-        final user = authData.user;
-        final role = authData.role ?? user?.role ?? '-';
-        final position = authData.position?.name ?? '-';
-        final departmentName =
-            authData.department?.name ?? user?.departemen?.name ?? '-';
-        final shiftName =
-            authData.defaultShift?.name ?? user?.shiftKerja?.name ?? '-';
+        return BlocBuilder<GetUserBloc, GetUserState>(
+          builder: (context, userState) {
+            final freshUser = userState.maybeWhen(
+              success: (u) => u,
+              orElse: () => null,
+            );
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 2,
-                      ),
+            final authUser = authData?.user;
+            // Nama: authData (login) pasti punya nama lengkap, freshUser mungkin tidak
+            final userName = authUser?.name ?? freshUser?.name ?? 'Pengguna';
+            final imageUrl = freshUser?.imageUrl ?? authUser?.imageUrl;
+
+            // Prioritize login response (authData) for relational fields
+            final role = _formatRole(authData?.role ?? freshUser?.role ?? authUser?.role);
+            final position = authData?.position?.name ??
+                freshUser?.position ??
+                authUser?.position ?? '-';
+            final departmentName = authData?.department?.name ??
+                freshUser?.departemen?.name ??
+                freshUser?.department ??
+                authUser?.departemen?.name ??
+                authUser?.department ?? '-';
+            final shiftName = authData?.defaultShift?.name ??
+                freshUser?.shiftKerja?.name ??
+                authUser?.shiftKerja?.name ?? '-';
+
+            return BlocBuilder<GetCompanyBloc, GetCompanyState>(
+              builder: (context, companyState) {
+                final officeLocation = companyState.maybeWhen(
+                  success: (company) =>
+                      (company.name != null && company.name!.isNotEmpty)
+                          ? company.name!
+                          : (authData?.company?.name ?? '-'),
+                  orElse: () => authData?.company?.name ?? '-',
+                );
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
-                      child:
-                          user?.imageUrl != null && user!.imageUrl!.isNotEmpty
-                              ? Image.network(
-                                  user.imageUrl!,
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(22),
+                              child: imageUrl != null && imageUrl.isNotEmpty
+                                  ? Image.network(
+                                      imageUrl,
                                       width: 50,
                                       height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                      child: const Icon(
-                                        Icons.person,
-                                        size: 28,
-                                        color: Colors.white,
-                                      ),
-                                    );
-                                  },
-                                )
-                              : Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 28,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              _buildAvatarPlaceholder(),
+                                    )
+                                  : _buildAvatarPlaceholder(),
+                            ),
+                          ),
+                          const SpaceWidth(16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Halo, $userName',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                    ),
-                  ),
-                  const SpaceWidth(16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello, ${user?.name ?? 'User'}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SpaceHeight(2),
-                        Text(
-                          position,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SpaceHeight(12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.badge_rounded,
-                          size: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                        const SpaceWidth(8),
-                        Expanded(
-                          child: Text(
-                            'Role: $role',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.9),
+                                const SpaceHeight(2),
+                                Text(
+                                  position,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SpaceHeight(6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.business_rounded,
-                          size: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                        const SpaceWidth(8),
-                        Expanded(
-                          child: Text(
-                            'Dept: $departmentName',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
+                        ],
+                      ),
+                      const SpaceHeight(12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 1,
                           ),
                         ),
-                      ],
-                    ),
-                    const SpaceHeight(6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time_rounded,
-                          size: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                        const SpaceWidth(8),
-                        Expanded(
-                          child: Text(
-                            'Shift: $shiftName',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.9),
+                        child: Column(
+                          children: [
+                            _buildHeaderInfoRow(
+                              Icons.badge_rounded,
+                              'Peran: $role',
                             ),
-                          ),
+                            const SpaceHeight(6),
+                            _buildHeaderInfoRow(
+                              Icons.business_rounded,
+                              'Departemen: $departmentName',
+                            ),
+                            const SpaceHeight(6),
+                            _buildHeaderInfoRow(
+                              Icons.access_time_rounded,
+                              'Shift: $shiftName',
+                            ),
+                            const SpaceHeight(6),
+                            _buildHeaderInfoRow(
+                              Icons.location_city_rounded,
+                              'Kantor: $officeLocation',
+                              maxLines: 2,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildFallbackHeader() {
+  Widget _buildAvatarPlaceholder() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: const Icon(Icons.person, size: 28, color: Colors.white),
+    );
+  }
+
+  Widget _buildHeaderInfoRow(IconData icon, String text, {int maxLines = 1}) {
+    return Row(
+      crossAxisAlignment: maxLines > 1
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+        const SpaceWidth(8),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: const Icon(
-                  Icons.person,
-                  size: 28,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SpaceWidth(16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hello, User',
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SpaceHeight(4),
-                Text(
-                  'Have a productive day!',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -628,15 +690,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       builder: (context, snapshot) {
         String startTime = '08:00';
         String endTime = '17:00';
+        String workMode = '-';
+        String? attendanceAddress;
 
         if (snapshot.hasData && snapshot.data != null) {
           final authData = snapshot.data!;
-          startTime = authData.user?.shiftKerja?.startTime ??
-              authData.defaultShiftDetail?.startTime?.toFormattedTime() ??
-              '08:00';
-          endTime = authData.user?.shiftKerja?.endTime ??
-              authData.defaultShiftDetail?.endTime?.toFormattedTime() ??
-              '17:00';
+          final rawStart = authData.user?.shiftKerja?.startTime ??
+              authData.defaultShiftDetail?.startTime;
+          final rawEnd = authData.user?.shiftKerja?.endTime ??
+              authData.defaultShiftDetail?.endTime;
+          startTime = _formatShiftTime(rawStart, '08:00');
+          endTime = _formatShiftTime(rawEnd, '17:00');
+          workMode =
+              _formatWorkMode(authData.user?.workMode ?? authData.workMode);
+          attendanceAddress = authData.company?.address;
         }
 
         return Container(
@@ -719,31 +786,87 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
               const SpaceHeight(16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Jam Kerja',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  Text(
-                    '$startTime - $endTime',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                ],
+              _buildTimeCardInfoRow(
+                icon: Icons.schedule_rounded,
+                label: 'Jam Kerja',
+                value: '$startTime - $endTime',
+              ),
+              const SpaceHeight(12),
+              _buildTimeCardInfoRow(
+                icon: Icons.location_on_rounded,
+                label: 'Lokasi Absen',
+                value: _formatAttendanceLocation(attendanceAddress),
+                maxLines: 2,
+              ),
+              const SpaceHeight(12),
+              _buildTimeCardInfoRow(
+                icon: Icons.work_outline_rounded,
+                label: 'Mode Kerja',
+                value: workMode,
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildTimeCardInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    int maxLines = 1,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1e3c72).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: const Color(0xFF1e3c72),
+          ),
+        ),
+        const SpaceWidth(10),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 92,
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+              const SpaceWidth(8),
+              Expanded(
+                child: Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.grey[800],
+                  ),
+                  maxLines: maxLines,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -851,7 +974,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           success: (data) => double.parse(data.radiusKm!),
         );
         final attendanceType = state.maybeWhen(
-          orElse: () => 'Location',
+          orElse: () => 'Lokasi',
           success: (data) => data.attendanceType!,
         );
 
@@ -1021,7 +1144,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return;
       }
 
-      if (distanceKm > radiusPoint &&
+      if (!_isRemoteWorkMode() &&
+          distanceKm > radiusPoint &&
           (attendanceType == 'location_based_only' ||
               attendanceType == 'hybrid')) {
         _showOutOfAreaDialog(
@@ -1034,8 +1158,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (isCheckIn) {
         if (isCheckedin) {
           _showModernDialog(
-            'Already Checked In',
-            'You have already checked in today.',
+            'Sudah Absen Masuk',
+            'Anda sudah melakukan absen masuk hari ini.',
             Icons.check_circle_rounded,
             Colors.green,
           );
@@ -1044,8 +1168,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       } else {
         if (!isCheckedin) {
           _showModernDialog(
-            'Check In Required',
-            'Please check in first before checking out.',
+            'Absen Masuk Diperlukan',
+            'Silakan absen masuk terlebih dahulu sebelum absen pulang.',
             Icons.info_rounded,
             Colors.blue,
           );
@@ -1053,8 +1177,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
         if (isCheckout) {
           _showModernDialog(
-            'Already Checked Out',
-            'You have already checked out today.',
+            'Sudah Absen Pulang',
+            'Anda sudah melakukan absen pulang hari ini.',
             Icons.check_circle_rounded,
             Colors.green,
           );
@@ -1065,8 +1189,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _navigateToAttendance(attendanceType, isCheckIn);
     } catch (e) {
       _showModernDialog(
-        'Error',
-        'An error occurred: $e',
+        'Terjadi Kesalahan',
+        'Terjadi kesalahan: $e',
         Icons.error_rounded,
         Colors.red,
       );
@@ -1092,16 +1216,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       if (position.isMocked) {
         _showModernSnackBar(
-          'You are using fake location',
+          'Anda menggunakan lokasi palsu (fake GPS)',
           Icons.error_outline,
           Colors.red,
         );
         return;
       }
 
-      if (distanceKm > radiusPoint) {
+      if (!_isRemoteWorkMode() && distanceKm > radiusPoint) {
         _showModernSnackBar(
-          'You are outside the attendance area',
+          'Anda berada di luar area absensi',
           Icons.location_off,
           Colors.orange,
         );
@@ -1126,14 +1250,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       } else {
         _showModernSnackBar(
-          'You have completed attendance today',
+          'Anda telah menyelesaikan absensi hari ini',
           Icons.check_circle,
           Colors.green,
         );
       }
     } catch (e) {
       _showModernSnackBar(
-        'Error: $e',
+        'Kesalahan: $e',
         Icons.error,
         Colors.red,
       );
@@ -1340,7 +1464,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
               const SpaceHeight(16),
               Text(
-                'Register Face Required',
+                'Daftarkan Wajah Terlebih Dahulu',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -1350,7 +1474,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
               const SpaceHeight(8),
               Text(
-                'You need to register your face first before using face attendance. Would you like to register now?',
+                'Anda perlu mendaftarkan wajah terlebih dahulu sebelum menggunakan absensi wajah. Ingin mendaftar sekarang?',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -1378,7 +1502,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           onTap: () => Navigator.pop(context),
                           child: Center(
                             child: Text(
-                              'Later',
+                              'Nanti',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -1410,7 +1534,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           },
                           child: Center(
                             child: Text(
-                              'Register Now',
+                              'Daftar Sekarang',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

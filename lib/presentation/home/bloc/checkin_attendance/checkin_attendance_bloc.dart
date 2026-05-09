@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/data/models/request/checkinout_request_model.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -17,9 +18,11 @@ class CheckinAttendanceBloc
   ) : super(const _Initial()) {
     on<_Checkin>((event, emit) async {
       emit(const _Loading());
+      final authData = await AuthLocalDatasource().getAuthData();
       final requestModel = CheckInOutRequestModel(
         latitude: event.latitute,
         longitude: event.longitude,
+        workMode: authData?.user?.workMode ?? authData?.workMode,
       );
       final result = await datasource.checkin(requestModel);
       result.fold(

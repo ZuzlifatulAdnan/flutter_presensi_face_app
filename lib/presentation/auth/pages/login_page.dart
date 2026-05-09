@@ -150,7 +150,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           ),
                           const SpaceHeight(16),
                           Text(
-                            'Absensi Tim SPBE',
+                            'Absen Devtech KI',
                             style: GoogleFonts.poppins(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,

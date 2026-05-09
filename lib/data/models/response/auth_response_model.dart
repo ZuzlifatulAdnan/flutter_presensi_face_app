@@ -1,9 +1,13 @@
 import 'dart:convert';
 
+import 'package:flutter_absensi_app/data/models/response/company_response_model.dart';
+
 class AuthResponseModel {
     final User? user;
     final String? token;
     final String? role;
+    final String? workMode;
+    final Company? company;
     final Position? position;
     final DefaultShift? defaultShift;
     final DefaultShiftDetail? defaultShiftDetail;
@@ -13,6 +17,8 @@ class AuthResponseModel {
         this.user,
         this.token,
         this.role,
+        this.workMode,
+        this.company,
         this.position,
         this.defaultShift,
         this.defaultShiftDetail,
@@ -27,6 +33,8 @@ class AuthResponseModel {
         user: json["user"] == null ? null : User.fromMap(json["user"]),
         token: json["token"],
         role: json["role"],
+        workMode: json["work_mode"],
+        company: json["company"] == null ? null : Company.fromMap(json["company"]),
         position: json["position"] == null ? null : Position.fromMap(json["position"]),
         defaultShift: json["default_shift"] == null ? null : DefaultShift.fromMap(json["default_shift"]),
         defaultShiftDetail: json["default_shift_detail"] == null ? null : DefaultShiftDetail.fromMap(json["default_shift_detail"]),
@@ -37,6 +45,8 @@ class AuthResponseModel {
         "user": user?.toMap(),
         "token": token,
         "role": role,
+        "work_mode": workMode,
+        "company": company?.toMap(),
         "position": position?.toMap(),
         "default_shift": defaultShift?.toMap(),
         "default_shift_detail": defaultShiftDetail?.toMap(),
@@ -47,6 +57,8 @@ class AuthResponseModel {
     User? user,
     String? token,
     String? role,
+    String? workMode,
+    Company? company,
     Position? position,
     DefaultShift? defaultShift,
     DefaultShiftDetail? defaultShiftDetail,
@@ -56,6 +68,8 @@ class AuthResponseModel {
       user: user ?? this.user,
       token: token ?? this.token,
       role: role ?? this.role,
+      workMode: workMode ?? this.workMode,
+      company: company ?? this.company,
       position: position ?? this.position,
       defaultShift: defaultShift ?? this.defaultShift,
       defaultShiftDetail: defaultShiftDetail ?? this.defaultShiftDetail,
@@ -68,6 +82,8 @@ class User {
     final int? id;
     final String? name;
     final String? email;
+    final String? workMode;
+    final int? companyId;
     final DateTime? emailVerifiedAt;
     final dynamic twoFactorSecret;
     final dynamic twoFactorRecoveryCodes;
@@ -91,6 +107,8 @@ class User {
         this.id,
         this.name,
         this.email,
+        this.workMode,
+        this.companyId,
         this.emailVerifiedAt,
         this.twoFactorSecret,
         this.twoFactorRecoveryCodes,
@@ -119,6 +137,8 @@ class User {
         id: json["id"],
         name: json["name"],
         email: json["email"],
+        workMode: json["work_mode"],
+        companyId: json["company_id"],
         emailVerifiedAt: json["email_verified_at"] == null ? null : DateTime.parse(json["email_verified_at"]),
         twoFactorSecret: json["two_factor_secret"],
         twoFactorRecoveryCodes: json["two_factor_recovery_codes"],
@@ -143,6 +163,8 @@ class User {
         "id": id,
         "name": name,
         "email": email,
+        "work_mode": workMode,
+        "company_id": companyId,
         "email_verified_at": emailVerifiedAt?.toIso8601String(),
         "two_factor_secret": twoFactorSecret,
         "two_factor_recovery_codes": twoFactorRecoveryCodes,
@@ -283,8 +305,8 @@ class DefaultShift {
 class DefaultShiftDetail {
     final int? id;
     final String? name;
-    final DateTime? startTime;
-    final DateTime? endTime;
+    final String? startTime;
+    final String? endTime;
 
     DefaultShiftDetail({
         this.id,
@@ -300,15 +322,15 @@ class DefaultShiftDetail {
     factory DefaultShiftDetail.fromMap(Map<String, dynamic> json) => DefaultShiftDetail(
         id: json["id"],
         name: json["name"],
-        startTime: json["start_time"] == null ? null : DateTime.parse(json["start_time"]),
-        endTime: json["end_time"] == null ? null : DateTime.parse(json["end_time"]),
+        startTime: json["start_time"],
+        endTime: json["end_time"],
     );
 
     Map<String, dynamic> toMap() => {
         "id": id,
         "name": name,
-        "start_time": startTime?.toIso8601String(),
-        "end_time": endTime?.toIso8601String(),
+        "start_time": startTime,
+        "end_time": endTime,
     };
 }
 

@@ -28,7 +28,10 @@ class Attendance {
     final int? userId;
     final DateTime? date;
     final String? timeIn;
+    final String? timeOut;
     final String? latlonIn;
+    final String? latlonOut;
+    final String? workMode;
     final DateTime? updatedAt;
     final DateTime? createdAt;
     final int? id;
@@ -37,7 +40,10 @@ class Attendance {
         this.userId,
         this.date,
         this.timeIn,
+        this.timeOut,
         this.latlonIn,
+        this.latlonOut,
+        this.workMode,
         this.updatedAt,
         this.createdAt,
         this.id,
@@ -51,7 +57,10 @@ class Attendance {
         userId: json["user_id"],
         date: json["date"] == null ? null : DateTime.parse(json["date"]),
         timeIn: json["time_in"],
+        timeOut: json["time_out"],
         latlonIn: json["latlon_in"],
+        latlonOut: json["latlon_out"],
+        workMode: json["work_mode"],
         updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
         createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
         id: json["id"],
@@ -61,7 +70,10 @@ class Attendance {
         "user_id": userId,
         "date": "${date!.year.toString().padLeft(4, '0')}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}",
         "time_in": timeIn,
+        "time_out": timeOut,
         "latlon_in": latlonIn,
+        "latlon_out": latlonOut,
+        "work_mode": workMode,
         "updated_at": updatedAt?.toIso8601String(),
         "created_at": createdAt?.toIso8601String(),
         "id": id,
