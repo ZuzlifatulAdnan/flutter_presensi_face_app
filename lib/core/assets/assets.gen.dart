@@ -17,15 +17,11 @@ import 'package:vector_graphics/vector_graphics.dart' as _vg;
 class $AssetsIconGen {
   const $AssetsIconGen();
 
-  /// File path: assets/icon/logo.png
-  AssetGenImage get logo => const AssetGenImage('assets/icon/logo.png');
-
-  /// File path: assets/icon/play_store_512.png
-  AssetGenImage get playStore512 =>
-      const AssetGenImage('assets/icon/play_store_512.png');
+  /// File path: assets/icon/app_icon.png
+  AssetGenImage get appIcon => const AssetGenImage('assets/icon/app_icon.png');
 
   /// List of all assets
-  List<AssetGenImage> get values => [logo, playStore512];
+  List<AssetGenImage> get values => [appIcon];
 }
 
 class $AssetsIconsGen {
@@ -93,10 +89,6 @@ class $AssetsImagesGen {
   AssetGenImage get imgMyLocation =>
       const AssetGenImage('assets/images/img_my_location.png');
 
-  /// File path: assets/images/logo_code_with_bahri_bk.png
-  AssetGenImage get logoCodeWithBahriBk =>
-      const AssetGenImage('assets/images/logo_code_with_bahri_bk.png');
-
   /// File path: assets/images/logo_geo.png
   AssetGenImage get logoGeo =>
       const AssetGenImage('assets/images/logo_geo.png');
@@ -121,7 +113,6 @@ class $AssetsImagesGen {
         bgHome,
         failed,
         imgMyLocation,
-        logoCodeWithBahriBk,
         logoGeo,
         logoGeoSquare,
         logoWhite,

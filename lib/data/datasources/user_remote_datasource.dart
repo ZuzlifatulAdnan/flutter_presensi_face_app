@@ -55,4 +55,34 @@ class UserRemoteDatasource {
       return left(body);
     }
   }
+
+  Future<Either<String, String>> updatePassword(
+      String oldPassword, String newPassword, String confirmPassword) async {
+    final authData = await AuthLocalDatasource().getAuthData();
+    final url = Uri.parse('${Variables.baseUrl}/api/api-user/update-password');
+    final response = await http.post(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${authData!.token}',
+      },
+      body: jsonEncode({
+        'current_password': oldPassword,
+        'password': newPassword,
+        'password_confirmation': confirmPassword,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return right('Password berhasil diubah');
+    } else {
+      try {
+        final body = jsonDecode(response.body);
+        return left(body['message'] ?? 'Gagal mengubah password');
+      } catch (e) {
+        return left('Gagal mengubah password');
+      }
+    }
+  }
 }

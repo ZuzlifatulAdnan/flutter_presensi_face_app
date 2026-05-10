@@ -17,6 +17,15 @@ class AuthLocalDatasource {
     }
   }
 
+  Future<void> updateUser(User user) async {
+    final pref = await SharedPreferences.getInstance();
+    final authData = await getAuthData();
+    if (authData != null) {
+      final updatedData = authData.copyWith(user: user);
+      await pref.setString('auth_data', updatedData.toJson());
+    }
+  }
+
   Future<void> removeAuthData() async {
     final pref = await SharedPreferences.getInstance();
     await pref.remove('auth_data');

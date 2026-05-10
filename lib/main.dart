@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_absensi_app/core/helper/attendance_notification_service.dart';
 import 'package:flutter_absensi_app/data/datasources/attendance_remote_datasource.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_remote_datasource.dart';
 import 'package:flutter_absensi_app/data/datasources/permisson_remote_datasource.dart';
@@ -26,6 +27,7 @@ import 'package:flutter_absensi_app/presentation/overtimes/blocs/get_overtime_st
 import 'package:flutter_absensi_app/presentation/overtimes/blocs/start_overtime/start_overtime_bloc.dart';
 import 'package:flutter_absensi_app/presentation/overtimes/blocs/end_overtime/end_overtime_bloc.dart';
 import 'package:flutter_absensi_app/presentation/profile/bloc/get_user/get_user_bloc.dart';
+import 'package:flutter_absensi_app/presentation/profile/bloc/update_password/update_password_bloc.dart';
 import 'package:flutter_absensi_app/presentation/profile/bloc/update_user/update_user_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -39,6 +41,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
+  // Inisialisasi service notifikasi pengingat absen
+  await AttendanceNotificationService().initialize();
   runApp(const MyApp());
 }
 
@@ -125,6 +129,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (context) => UpdateUserBloc(UserRemoteDatasource()),
+        ),
+        BlocProvider(
+          create: (context) => UpdatePasswordBloc(UserRemoteDatasource()),
         ),
       ],
       child: MaterialApp(

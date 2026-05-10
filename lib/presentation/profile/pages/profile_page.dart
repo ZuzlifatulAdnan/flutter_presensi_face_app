@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
+import 'package:flutter_absensi_app/core/constants/variables.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -7,6 +8,7 @@ import '../../../core/core.dart';
 import '../../auth/bloc/logout/logout_bloc.dart';
 import '../../auth/pages/login_page.dart';
 import '../bloc/get_user/get_user_bloc.dart';
+import 'change_password_page.dart';
 import 'update_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -102,6 +104,19 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  /// Membangun URL penuh foto profil.
+  /// Backend mengembalikan path relatif (misal "images/photo.jpg"),
+  /// perlu ditambahkan baseUrl + "/storage/" di depannya.
+  String? _buildFullImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return null;
+    final url = rawUrl.trim();
+    // Sudah URL lengkap, gunakan langsung
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Path relatif, tambahkan baseUrl/storage/
+    final clean = url.startsWith('/') ? url.substring(1) : url;
+    return '${Variables.baseUrl}/storage/$clean';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,7 +179,8 @@ class _ProfilePageState extends State<ProfilePage>
                                   name: user?.name ?? '-',
                                   email: user?.email ?? '-',
                                   phone: user?.phone ?? '-',
-                                  imageUrl: user?.imageUrl,
+                                  imageUrl: _buildFullImageUrl(
+                                      user?.imageUrl?.toString()),
                                   role: authData.role ?? user?.role ?? '-',
                                   position: authData.position?.name ?? '-',
                                   department: authData.department?.name ??
@@ -547,8 +563,17 @@ class _ProfilePageState extends State<ProfilePage>
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            context.push(UpdateProfilePage(user: user));
+                          onTap: () async {
+                            final result =
+                                await context.push(UpdateProfilePage(user: user));
+                            if (result == true) {
+                              if (mounted) {
+                                context
+                                    .read<GetUserBloc>()
+                                    .add(const GetUserEvent.getUser());
+                                setState(() {});
+                              }
+                            }
                           },
                           child: Center(
                             child: Row(
@@ -576,6 +601,51 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   );
                 },
+              ),
+              const SpaceHeight(16),
+              
+              // Ganti Password Button
+              Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF1e3c72).withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      context.push(const ChangePasswordPage());
+                    },
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.lock_outline_rounded,
+                            color: Color(0xFF1e3c72),
+                            size: 20,
+                          ),
+                          const SpaceWidth(8),
+                          Text(
+                            'Ganti Password',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1e3c72),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

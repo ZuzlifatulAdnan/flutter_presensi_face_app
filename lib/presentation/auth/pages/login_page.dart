@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_absensi_app/core/helper/attendance_notification_service.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/presentation/auth/bloc/login/login_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -131,46 +132,54 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   // App Logo and Title
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1,
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Image.asset(
+                            Assets.images.logoWhite.path,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.location_on_rounded,
-                            size: 64,
+                        const SpaceHeight(20),
+                        Text(
+                          'ABSEN DEVTECH',
+                          style: GoogleFonts.poppins(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
+                            letterSpacing: 1.5,
                           ),
-                          const SpaceHeight(16),
-                          Text(
-                            'Absen Devtech KI',
-                            style: GoogleFonts.poppins(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 1.2,
-                            ),
-                            textAlign: TextAlign.center,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(
+                          'PRESENSI & KEPEGAWAIAN',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 3.0,
                           ),
-                          Text(
-                            'Dinas Komunikasi dan Informatika Pringsewu',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white.withOpacity(0.8),
-                              letterSpacing: 0.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
 
@@ -331,9 +340,46 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 listener: (context, state) {
                                   state.maybeWhen(
                                     orElse: () {},
-                                    success: (data) {
-                                      AuthLocalDatasource().saveAuthData(data);
-                                      context.pushReplacement(const MainPage());
+                                    success: (data) async {
+                                      await AuthLocalDatasource()
+                                          .saveAuthData(data);
+                                      // Jadwalkan notifikasi pengingat absen
+                                      // sesuai shift kerja (15 menit sebelum)
+                                      final shiftStart =
+                                          data.user?.shiftKerja?.startTime ??
+                                              data.defaultShiftDetail
+                                                  ?.startTime;
+                                      if (shiftStart != null &&
+                                          shiftStart.isNotEmpty) {
+                                        final shiftName =
+                                            data.defaultShift?.name ??
+                                                data.user?.shiftKerja?.name ??
+                                                'Shift Kerja';
+                                        // Parse format "HH:mm" dari startTime
+                                        String parsedTime = shiftStart;
+                                        final dtParsed =
+                                            DateTime.tryParse(shiftStart);
+                                        if (dtParsed != null) {
+                                          parsedTime =
+                                              '${dtParsed.hour.toString().padLeft(2, '0')}:${dtParsed.minute.toString().padLeft(2, '0')}';
+                                        } else {
+                                          final m = RegExp(r'(\d{1,2}):(\d{2})')
+                                              .firstMatch(shiftStart);
+                                          if (m != null) {
+                                            parsedTime =
+                                                '${m.group(1)!.padLeft(2, '0')}:${m.group(2)!}';
+                                          }
+                                        }
+                                        await AttendanceNotificationService()
+                                            .scheduleShiftReminder(
+                                          shiftStartTime: parsedTime,
+                                          shiftName: shiftName,
+                                        );
+                                      }
+                                      if (context.mounted) {
+                                        context
+                                            .pushReplacement(const MainPage());
+                                      }
                                     },
                                     error: (message) {
                                       ScaffoldMessenger.of(context)

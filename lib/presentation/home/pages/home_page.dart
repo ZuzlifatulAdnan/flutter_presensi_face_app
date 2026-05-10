@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_absensi_app/core/constants/variables.dart';
 import 'package:flutter_absensi_app/core/helper/radius_calculate.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/data/models/response/auth_response_model.dart';
@@ -329,6 +330,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return 'Belum tersedia';
   }
 
+  /// Membangun URL penuh foto profil.
+  /// Backend mengembalikan path relatif (misal "images/photo.jpg"),
+  /// perlu ditambahkan baseUrl + "/storage/" di depannya.
+  String? _buildFullImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return null;
+    final url = rawUrl.trim();
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    final clean = url.startsWith('/') ? url.substring(1) : url;
+    return '${Variables.baseUrl}/storage/$clean';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -430,7 +442,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             final authUser = authData?.user;
             // Nama: authData (login) pasti punya nama lengkap, freshUser mungkin tidak
             final userName = authUser?.name ?? freshUser?.name ?? 'Pengguna';
-            final imageUrl = freshUser?.imageUrl ?? authUser?.imageUrl;
+            final imageUrl = _buildFullImageUrl(
+                (freshUser?.imageUrl ?? authUser?.imageUrl)?.toString());
 
             // Prioritize login response (authData) for relational fields
             final role = _formatRole(authData?.role ?? freshUser?.role ?? authUser?.role);

@@ -99,7 +99,19 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
 
   loadData() async {
     authData = await AuthLocalDatasource().getAuthData();
-    setState(() {});
+    if (mounted) {
+      setState(() {
+        if (nameController?.text.isEmpty ?? true) {
+          nameController?.text = authData?.user?.name ?? '';
+        }
+        if (emailController?.text.isEmpty ?? true) {
+          emailController?.text = authData?.user?.email ?? '';
+        }
+        if (phoneController?.text.isEmpty ?? true) {
+          phoneController?.text = authData?.user?.phone ?? '';
+        }
+      });
+    }
   }
 
   @override
@@ -473,21 +485,24 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
   Widget _buildUpdateButton() {
     return BlocConsumer<UpdateUserBloc, UpdateUserState>(
       listener: (context, state) {
-        state.maybeMap(
+        state.maybeWhen(
           orElse: () {},
           success: (user) async {
-            context.read<GetUserBloc>().add(const GetUserEvent.getUser());
+            await AuthLocalDatasource().updateUser(user);
+            if (mounted) {
+              context.read<GetUserBloc>().add(const GetUserEvent.getUser());
 
-            _showModernSnackBar(
-              'Profile updated successfully!',
-              Icons.check_circle_rounded,
-              Colors.green,
-            );
-            Navigator.of(context).pop(true);
+              _showModernSnackBar(
+                'Profile updated successfully!',
+                Icons.check_circle_rounded,
+                Colors.green,
+              );
+              Navigator.of(context).pop(true);
+            }
           },
           error: (e) {
             _showModernSnackBar(
-              'Failed to update profile. Please try again.',
+              'Failed to update profile: $e',
               Icons.error_outline_rounded,
               Colors.red,
             );
@@ -618,8 +633,19 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
     final String email = emailController!.text.trim();
     final String phone = phoneController!.text.trim();
 
+    final int targetId = widget.user.id ?? authData?.user?.id ?? 0;
+    
+    if (targetId == 0) {
+      _showModernSnackBar(
+        'Gagal mengambil ID Pengguna, silakan login ulang',
+        Icons.error_outline_rounded,
+        Colors.red,
+      );
+      return;
+    }
+
     final UserRequestModel user = UserRequestModel(
-      id: widget.user.id!,
+      id: targetId,
       name: name,
       email: email,
       phone: phone,
@@ -627,7 +653,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
     );
 
     context.read<UpdateUserBloc>().add(
-          UpdateUserEvent.updateUser(user, widget.user.id!),
+          UpdateUserEvent.updateUser(user, targetId),
         );
   }
 
