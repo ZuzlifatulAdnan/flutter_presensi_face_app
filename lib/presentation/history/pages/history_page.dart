@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_absensi_app/presentation/history/blocs/get_all_attendances/get_all_attendances_bloc.dart';
+import 'package:flutter_absensi_app/data/models/response/attendance_precheck_model.dart';
 import 'package:flutter_absensi_app/data/models/response/attendance_response_model.dart';
+import 'package:flutter_absensi_app/presentation/history/blocs/attendance_summary/attendance_summary_bloc.dart';
 import 'package:flutter_absensi_app/presentation/history/pages/detail_history_page.dart';
+import 'package:flutter_absensi_app/presentation/history/widgets/attendance_filter_bar.dart';
+import 'package:flutter_absensi_app/presentation/history/widgets/attendance_summary_card.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,16 +20,32 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  DateTime? _selectedDate;
+  AttendanceFilter _filter = const AttendanceFilter();
+
+  DateTime? get _selectedDate => _filter.date;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
+      if (!mounted) return;
+      _applyFilter(_filter);
       context
-          .read<GetAllAttendancesBloc>()
-          .add(const GetAllAttendancesEvent.getAllAttendances());
+          .read<AttendanceSummaryBloc>()
+          .add(const AttendanceSummaryEvent.fetch());
     });
+  }
+
+  /// Filter dijalankan server lewat `GET /api/attendance/history`.
+  void _applyFilter(AttendanceFilter filter) {
+    setState(() => _filter = filter);
+    context.read<GetAllAttendancesBloc>().add(
+          GetAllAttendancesEvent.filter(
+            date: filter.dateParam,
+            status: filter.status,
+            workMode: filter.workMode?.value,
+          ),
+        );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -49,17 +69,11 @@ class _HistoryPageState extends State<HistoryPage> {
     );
 
     if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+      _applyFilter(_filter.copyWith(date: picked));
     }
   }
 
-  void _clearDateFilter() {
-    setState(() {
-      _selectedDate = null;
-    });
-  }
+  void _clearDateFilter() => _applyFilter(_filter.copyWith(clearDate: true));
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +95,12 @@ class _HistoryPageState extends State<HistoryPage> {
           child: Column(
             children: [
               _buildHeader(context),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: const AttendanceSummaryCard(),
+              ),
+              AttendanceFilterBar(filter: _filter, onChanged: _applyFilter),
+              const SpaceHeight(12),
               Expanded(
                 child: BlocBuilder<GetAllAttendancesBloc,
                     GetAllAttendancesState>(
@@ -126,7 +146,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       : 'Lacak catatan kehadiran harian Anda',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -135,9 +155,9 @@ class _HistoryPageState extends State<HistoryPage> {
           if (_selectedDate != null) ...[
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               ),
               child: IconButton(
                 icon: const Icon(
@@ -153,9 +173,9 @@ class _HistoryPageState extends State<HistoryPage> {
           ],
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: IconButton(
               icon: const Icon(
@@ -173,9 +193,10 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _refreshData() async {
+    _applyFilter(_filter);
     context
-        .read<GetAllAttendancesBloc>()
-        .add(const GetAllAttendancesEvent.getAllAttendances());
+        .read<AttendanceSummaryBloc>()
+        .add(const AttendanceSummaryEvent.fetch());
     await Future<void>.delayed(const Duration(milliseconds: 600));
   }
 
@@ -205,7 +226,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -231,7 +252,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   'Tidak ada data kehadiran yang tersedia',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -260,7 +281,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -286,7 +307,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   'Anda belum memiliki riwayat kehadiran.',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -315,7 +336,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -341,7 +362,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   'Tidak ditemukan catatan kehadiran untuk ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -371,7 +392,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -399,7 +420,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     message,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -464,7 +485,6 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Widget _buildAttendanceCard(Attendance attendance) {
     final dateFormatter = DateFormat('EEEE, dd MMMM yyyy', 'id_ID');
-    final timeFormatter = DateFormat('HH:mm');
     final statusColor = _getStatusColor(attendance.status);
     final statusLabel = _getStatusLabel(attendance.status);
 
@@ -484,7 +504,7 @@ class _HistoryPageState extends State<HistoryPage> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -501,7 +521,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [statusColor, statusColor.withOpacity(0.7)],
+                    colors: [statusColor, statusColor.withValues(alpha: 0.7)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -535,10 +555,10 @@ class _HistoryPageState extends State<HistoryPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
+                            color: statusColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: statusColor.withOpacity(0.3),
+                              color: statusColor.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Text(
@@ -558,7 +578,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.purple.withOpacity(0.12),
+                              color: Colors.purple.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -579,7 +599,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.12),
+                              color: Colors.orange.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -647,7 +667,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.08),
+                        color: Colors.red.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -666,7 +686,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                   'Telat',
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
-                                    color: Colors.red.withOpacity(0.7),
+                                    color: Colors.red.withValues(alpha: 0.7),
                                   ),
                                 ),
                                 Text(
@@ -692,7 +712,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.08),
+                        color: Colors.orange.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -711,7 +731,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                   'Early Leave',
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
-                                    color: Colors.orange.withOpacity(0.7),
+                                    color: Colors.orange.withValues(alpha: 0.7),
                                   ),
                                 ),
                                 Text(
@@ -743,7 +763,7 @@ class _HistoryPageState extends State<HistoryPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -762,7 +782,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   label,
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                   ),
                 ),
                 Text(
@@ -787,7 +807,7 @@ class _HistoryPageState extends State<HistoryPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -802,7 +822,7 @@ class _HistoryPageState extends State<HistoryPage> {
             '$label: ',
             style: GoogleFonts.poppins(
               fontSize: 12,
-              color: color.withOpacity(0.7),
+              color: color.withValues(alpha: 0.7),
             ),
           ),
           Expanded(

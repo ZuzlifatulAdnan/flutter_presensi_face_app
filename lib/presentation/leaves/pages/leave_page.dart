@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_absensi_app/core/core.dart';
 import 'package:flutter_absensi_app/data/models/response/leave_response_model.dart';
+import 'package:flutter_absensi_app/core/theme/app_theme.dart';
+import 'package:flutter_absensi_app/presentation/leaves/bloc/cancel_leave/cancel_leave_bloc.dart';
 import 'package:flutter_absensi_app/presentation/leaves/bloc/get_all_leaves/get_all_leaves_bloc.dart';
 import 'package:flutter_absensi_app/presentation/leaves/pages/add_leave_page.dart';
 import 'package:flutter_absensi_app/presentation/leaves/pages/attachment_viewer_page.dart';
@@ -62,6 +64,33 @@ class _LeavePageState extends State<LeavePage> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<CancelLeaveBloc, CancelLeaveState>(
+      listener: (context, state) => state.mapOrNull<void>(
+        success: (s) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(s.message),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+          context
+              .read<GetAllLeavesBloc>()
+              .add(const GetAllLeavesEvent.getAllLeaves());
+        },
+        error: (s) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(s.message),
+              backgroundColor: AppTheme.danger,
+            ),
+          );
+        },
+      ),
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -109,9 +138,9 @@ class _LeavePageState extends State<LeavePage> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: IconButton(
               icon: const Icon(
@@ -139,7 +168,7 @@ class _LeavePageState extends State<LeavePage> {
                   'Lacak dan kelola riwayat izin/cuti Anda.',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -188,7 +217,7 @@ class _LeavePageState extends State<LeavePage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -202,7 +231,7 @@ class _LeavePageState extends State<LeavePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -220,7 +249,7 @@ class _LeavePageState extends State<LeavePage> {
                       'Total Izin/Cuti',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     Text(
@@ -252,11 +281,11 @@ class _LeavePageState extends State<LeavePage> {
               onPressed: () async {
                 await _checkBackendAndNavigate(() async {
                   final result = await context.push(const AddLeavePage());
-                  if (result == true && context.mounted) {
-                    context
-                        .read<GetAllLeavesBloc>()
-                        .add(const GetAllLeavesEvent.getAllLeaves());
-                  }
+                  if (result != true || !mounted) return;
+                  if (!context.mounted) return;
+                  context
+                      .read<GetAllLeavesBloc>()
+                      .add(const GetAllLeavesEvent.getAllLeaves());
                 });
               },
               icon: const Icon(Icons.add_circle_outline_rounded),
@@ -289,12 +318,12 @@ class _LeavePageState extends State<LeavePage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(color: AppColors.light.withOpacity(0.4)),
+        border: Border.all(color: AppColors.light.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,10 +384,10 @@ class _LeavePageState extends State<LeavePage> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
+                            color: statusColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(16),
                             border:
-                                Border.all(color: statusColor.withOpacity(0.3)),
+                                Border.all(color: statusColor.withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             statusLabel,
@@ -398,10 +427,18 @@ class _LeavePageState extends State<LeavePage> {
                         label: 'Disetujui Pada',
                         value: _formatDate(leave.approvedAt),
                       ),
-                    if ((leave.attachmentUrl ?? '').isNotEmpty)
+                    if (leave.hasAttachment) ...[
                       const SpaceHeight(12),
-                    if ((leave.attachmentUrl ?? '').isNotEmpty)
-                      _buildAttachmentButton(leave.attachmentUrl!),
+                      _buildAttachmentButton(
+                        leave.attachment!.url!,
+                        name: leave.attachment!.name,
+                        sizeLabel: leave.attachment!.sizeLabel,
+                      ),
+                    ],
+                    if (leave.cancellable) ...[
+                      const SpaceHeight(16),
+                      _buildCancelButton(leave),
+                    ],
                   ],
                 ),
               ),
@@ -423,7 +460,7 @@ class _LeavePageState extends State<LeavePage> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -478,7 +515,7 @@ class _LeavePageState extends State<LeavePage> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -542,7 +579,7 @@ class _LeavePageState extends State<LeavePage> {
         children: [
           Icon(
             Icons.error_outline_rounded,
-            color: AppColors.red.withOpacity(0.9),
+            color: AppColors.red.withValues(alpha: 0.9),
             size: 48,
           ),
           const SpaceHeight(16),
@@ -616,8 +653,66 @@ class _LeavePageState extends State<LeavePage> {
     }
   }
 
-  Widget _buildAttachmentButton(String attachmentUrl) {
-    final fileName = attachmentUrl.split('/').last;
+  /// Tombol batalkan pengajuan (`POST /api/leaves/{id}/cancel`).
+  /// Server hanya mengizinkan pembatalan saat status masih `pending`.
+  Widget _buildCancelButton(Leave leave) {
+    return BlocBuilder<CancelLeaveBloc, CancelLeaveState>(
+      builder: (context, state) {
+        final busy =
+            state.maybeWhen(loading: () => true, orElse: () => false);
+        return SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: busy || leave.id == null
+                ? null
+                : () => _confirmCancel(leave),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.danger,
+              side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.5)),
+              minimumSize: const Size.fromHeight(44),
+            ),
+            icon: const Icon(Icons.cancel_outlined, size: 18),
+            label: const Text('Batalkan Pengajuan'),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmCancel(Leave leave) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Batalkan Pengajuan?'),
+        content: Text(
+          'Pengajuan ${leave.leaveType?.name ?? 'izin'} pada '
+          '${_formatDate(leave.startDate)} akan dibatalkan dan tidak bisa '
+          'dikembalikan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Tidak'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    context.read<CancelLeaveBloc>().add(CancelLeaveEvent.cancel(leave.id!));
+  }
+
+  Widget _buildAttachmentButton(
+    String attachmentUrl, {
+    String? name,
+    String? sizeLabel,
+  }) {
+    final fileName = name ?? attachmentUrl.split('/').last;
     final isImage = _isImageFile(fileName);
 
     return InkWell(

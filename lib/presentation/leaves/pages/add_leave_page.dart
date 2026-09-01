@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_absensi_app/presentation/leaves/bloc/create_leave/create_leave_bloc.dart';
 import 'package:flutter_absensi_app/presentation/leaves/bloc/leave_type/leave_type_bloc.dart';
@@ -9,6 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+
+import 'package:flutter_absensi_app/core/network/api_client.dart';
+import 'package:flutter_absensi_app/data/models/request/create_leave_request_model.dart';
 
 import '../../../core/core.dart';
 
@@ -25,7 +26,10 @@ class _AddLeavePageState extends State<AddLeavePage> {
   late final TextEditingController reasonController;
 
   int? selectedLeaveTypeId;
-  File? selectedFile;
+
+  /// Lampiran disimpan sebagai bytes, bukan path, supaya alur yang sama
+  /// berjalan di Android, iOS, dan web.
+  UploadFile? selectedFile;
   String? selectedFileName;
 
   @override
@@ -53,42 +57,56 @@ class _AddLeavePageState extends State<AddLeavePage> {
     super.dispose();
   }
 
-  Future<void> _pickImageFromGallery() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+  Future<void> _pickImageFromGallery() =>
+      _pickImage(ImageSource.gallery);
 
-    if (image != null) {
-      setState(() {
-        selectedFile = File(image.path);
-        selectedFileName = image.name;
-      });
-    }
-  }
+  Future<void> _pickImageFromCamera() => _pickImage(ImageSource.camera);
 
-  Future<void> _pickImageFromCamera() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.camera);
-
-    if (image != null) {
-      setState(() {
-        selectedFile = File(image.path);
-        selectedFileName = image.name;
-      });
-    }
+  Future<void> _pickImage(ImageSource source) async {
+    final image = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+    if (image == null) return;
+    _applyAttachment(
+      UploadFile.bytes(
+        'attachment',
+        await image.readAsBytes(),
+        filename: image.name.isEmpty ? 'lampiran.jpg' : image.name,
+      ),
+    );
   }
 
   Future<void> _pickFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    // `withData: true` supaya bytes tersedia di web (di sana `path` null).
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx'],
+      allowedExtensions: CreateLeaveRequestModel.allowedExtensions,
+      withData: true,
     );
 
-    if (result != null) {
-      setState(() {
-        selectedFile = File(result.files.single.path!);
-        selectedFileName = result.files.single.name;
-      });
+    final picked = result?.files.singleOrNull;
+    final bytes = picked?.bytes;
+    if (picked == null || bytes == null) return;
+
+    _applyAttachment(
+      UploadFile.bytes('attachment', bytes, filename: picked.name),
+    );
+  }
+
+  /// Validasi lokal (format & ukuran) supaya pengguna tidak perlu menunggu
+  /// respons 422 dari server.
+  void _applyAttachment(UploadFile file) {
+    final error = CreateLeaveRequestModel.validateAttachment(file);
+    if (error != null) {
+      context.showError(error);
+      return;
     }
+    setState(() {
+      selectedFile = file;
+      selectedFileName = file.filename;
+    });
   }
 
   void _showAttachmentOptions() {
@@ -284,11 +302,16 @@ class _AddLeavePageState extends State<AddLeavePage> {
           state.when(
             initial: () {},
             loading: () {},
-            success: (response) {
+            success: (leave) {
+              // `total_days` dihitung server (mengecualikan akhir pekan dan
+              // hari libur), jadi ditampilkan apa adanya.
+              final days = leave.totalDays;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    response,
+                    days == null
+                        ? 'Pengajuan berhasil dikirim.'
+                        : 'Pengajuan berhasil dikirim untuk $days hari kerja.',
                     style: GoogleFonts.poppins(),
                   ),
                   backgroundColor: AppColors.green,
@@ -378,9 +401,9 @@ class _AddLeavePageState extends State<AddLeavePage> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: IconButton(
               icon: const Icon(
@@ -408,7 +431,7 @@ class _AddLeavePageState extends State<AddLeavePage> {
                   'Ajukan permohonan cuti Anda',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -669,14 +692,14 @@ class _AddLeavePageState extends State<AddLeavePage> {
             ),
             prefixIcon: Icon(icon, color: AppColors.primary),
             filled: true,
-            fillColor: AppColors.light.withOpacity(0.3),
+            fillColor: AppColors.light.withValues(alpha: 0.3),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+              borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+              borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -697,17 +720,17 @@ class _AddLeavePageState extends State<AddLeavePage> {
         hintText: 'Explain the reason for your leave request...',
         hintStyle: GoogleFonts.poppins(
           fontSize: 14,
-          color: AppColors.grey.withOpacity(0.6),
+          color: AppColors.grey.withValues(alpha: 0.6),
         ),
         filled: true,
-        fillColor: AppColors.light.withOpacity(0.3),
+        fillColor: AppColors.light.withValues(alpha: 0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+          borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+          borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -751,7 +774,7 @@ class _AddLeavePageState extends State<AddLeavePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        selectedFileName ?? 'No file selected',
+                        selectedFileName ?? 'Belum ada lampiran dipilih',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: selectedFileName != null
@@ -766,7 +789,7 @@ class _AddLeavePageState extends State<AddLeavePage> {
                       ),
                       const SpaceHeight(4),
                       Text(
-                        'Tap to choose file (Image or PDF)',
+                        'Pilih berkas — JPG, PNG, WEBP, atau PDF (maks 5 MB)',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: AppColors.grey.withValues(alpha: 0.8),
@@ -801,8 +824,8 @@ class _AddLeavePageState extends State<AddLeavePage> {
           const SpaceHeight(12),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              selectedFile!,
+            child: Image.memory(
+              selectedFile!.bytes,
               height: 150,
               width: double.infinity,
               fit: BoxFit.cover,
@@ -815,7 +838,7 @@ class _AddLeavePageState extends State<AddLeavePage> {
 
   bool _isImageFile(String fileName) {
     final extension = fileName.split('.').last.toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'bmp'].contains(extension);
+    return ['jpg', 'jpeg', 'png', 'webp'].contains(extension);
   }
 
   Widget _buildSubmitButton() {

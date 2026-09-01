@@ -1,141 +1,171 @@
-import 'dart:convert';
-import 'dart:developer';
-
 import 'package:dartz/dartz.dart';
-import 'package:flutter_absensi_app/core/constants/variables.dart';
-import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
+
+import 'package:flutter_absensi_app/core/network/api_client.dart';
+import 'package:flutter_absensi_app/core/network/api_exception.dart';
 import 'package:flutter_absensi_app/data/models/request/create_leave_request_model.dart';
 import 'package:flutter_absensi_app/data/models/response/leave_balance_response_model.dart';
 import 'package:flutter_absensi_app/data/models/response/leave_response_model.dart';
 import 'package:flutter_absensi_app/data/models/response/leave_type_response_model.dart';
-import 'package:http/http.dart' as http;
 
 class LeaveRemoteDatasource {
-  // Get Leave Types
+  final ApiClient _api = ApiClient.instance;
+
+  /// `GET /api/leave-types`
   Future<Either<String, LeaveTypeResponseModel>> getLeaveTypes() async {
-    final authData = await AuthLocalDatasource().getAuthData();
-    final url = Uri.parse('${Variables.baseUrl}/api/leave-types');
-
-    final response = await http.get(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${authData?.token}',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return Right(LeaveTypeResponseModel.fromJson(response.body));
-    } else {
-      try {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return Left(
-            decoded['message']?.toString() ?? 'Failed to fetch leave types');
-      } catch (_) {
-        return const Left('Failed to fetch leave types');
-      }
+    try {
+      final res = await _api.get('/api/leave-types');
+      return Right(LeaveTypeResponseModel.fromMap(res.raw));
+    } on ApiException catch (e) {
+      return Left(e.message);
     }
   }
 
-  // Get Leave Balance
+  /// `GET /api/leave-balance?year=` — sisa kuota per jenis izin.
+  ///
+  /// Jalur lama `/api/leaves/balance` tetap dicoba supaya aplikasi bekerja di
+  /// server yang belum diperbarui.
   Future<Either<String, LeaveBalanceResponseModel>> getLeaveBalance({
     String? year,
   }) async {
-    final authData = await AuthLocalDatasource().getAuthData();
-    final queryParams = year != null ? '?year=$year' : '';
-    final url =
-        Uri.parse('${Variables.baseUrl}/api/leaves/balance$queryParams');
+    final query = {'year': year};
+    try {
+      final res = await _api.get('/api/leave-balance', query: query);
+      return Right(LeaveBalanceResponseModel.fromMap(res.raw));
+    } on ApiException catch (e) {
+      if (!e.isNotFound) return Left(e.message);
+    }
 
-    final response = await http.get(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${authData?.token}',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return Right(LeaveBalanceResponseModel.fromJson(response.body));
-    } else {
-      try {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return Left(
-            decoded['message']?.toString() ?? 'Failed to fetch leave balance');
-      } catch (_) {
-        return const Left('Failed to fetch leave balance');
-      }
+    try {
+      final res = await _api.get('/api/leaves/balance', query: query);
+      return Right(LeaveBalanceResponseModel.fromMap(res.raw));
+    } on ApiException catch (e) {
+      return Left(e.message);
     }
   }
 
-  // Get All Leaves
+  /// `GET /api/leaves` — hanya pengajuan milik sendiri.
+  ///
+  /// Tanpa [page]/[perPage] server mengirim maks 300 data terbaru.
   Future<Either<String, LeaveResponseModel>> getLeaves({
     String? status,
+    int? year,
+    int? page,
+    int? perPage,
   }) async {
-    final authData = await AuthLocalDatasource().getAuthData();
-    final queryParams = status != null ? '?status=$status' : '';
-    final url = Uri.parse('${Variables.baseUrl}/api/leaves$queryParams');
-
-    final response = await http.get(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${authData?.token}',
-      },
-    );
-log("GET LEAVES RESPONSE: ${response.body}");
-    if (response.statusCode == 200) {
-      return Right(LeaveResponseModel.fromJson(response.body));
-    } else {
-      try {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return Left(decoded['message']?.toString() ?? 'Failed to fetch leaves');
-      } catch (_) {
-        return const Left('Failed to fetch leaves');
-      }
+    try {
+      final res = await _api.get('/api/leaves', query: {
+        'status': status,
+        'year': year,
+        'page': page,
+        'per_page': perPage,
+      });
+      return Right(LeaveResponseModel.fromMap(res.raw));
+    } on ApiException catch (e) {
+      return Left(e.message);
     }
   }
 
-  // Create Leave Request
-  Future<Either<String, String>> createLeave(
+  /// `GET /api/leaves/{id}` — pemilik, atau admin/manager/hr.
+  Future<Either<String, Leave>> getLeaveDetail(int id) async {
+    try {
+      final res = await _api.get('/api/leaves/$id');
+      return Right(Leave.fromMap(res.dataMap));
+    } on ApiException catch (e) {
+      return Left(e.message);
+    }
+  }
+
+  /// `POST /api/leaves` — ajukan izin/cuti, `multipart/form-data` bila ada
+  /// lampiran.
+  ///
+  /// `total_days` dihitung server (mengecualikan akhir pekan dan hari libur),
+  /// jadi aplikasi tidak menghitungnya sendiri.
+  Future<Either<String, Leave>> createLeave(
     CreateLeaveRequestModel request,
   ) async {
-    final authData = await AuthLocalDatasource().getAuthData();
-    final url = Uri.parse('${Variables.baseUrl}/api/leaves');
+    final invalid = CreateLeaveRequestModel.validateAttachment(request.attachment);
+    if (invalid != null) return Left(invalid);
 
-    final multipartRequest = http.MultipartRequest('POST', url)
-      ..headers['Authorization'] = 'Bearer ${authData?.token}'
-      ..headers['Accept'] = 'application/json';
-
-    // Add fields - convert all values to String
-    final fields = request.toMap();
-    fields.forEach((key, value) {
-      multipartRequest.fields[key] = value.toString();
-    });
-
-    // Add file if exists
-    if (request.attachment != null) {
-      final file = await http.MultipartFile.fromPath(
-        'attachment',
-        request.attachment!.path,
+    try {
+      final res = await _api.multipart(
+        '/api/leaves',
+        fields: request.toMap(),
+        files: [if (request.attachment != null) request.attachment!],
       );
-      multipartRequest.files.add(file);
+      return Right(Leave.fromMap(res.dataMap));
+    } on ApiException catch (e) {
+      return Left(_leaveError(e));
     }
+  }
 
-    final streamedResponse = await multipartRequest.send();
-    final response = await http.Response.fromStream(streamedResponse);
+  /// `POST /api/leaves/{id}` — ubah pengajuan yang masih `pending`.
+  ///
+  /// Memakai POST (bukan PUT) karena PHP tidak mem-parse multipart pada PUT.
+  Future<Either<String, Leave>> updateLeave(
+    int id,
+    CreateLeaveRequestModel request,
+  ) async {
+    final invalid = CreateLeaveRequestModel.validateAttachment(request.attachment);
+    if (invalid != null) return Left(invalid);
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      return Right('Leave created successfully');
-    } else {
-      try {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        return Left(decoded['message']?.toString() ?? 'Failed to create leave');
-      } catch (_) {
-        return const Left('Failed to create leave');
-      }
+    try {
+      final res = await _api.multipart(
+        '/api/leaves/$id',
+        fields: request.toMap(),
+        files: [if (request.attachment != null) request.attachment!],
+      );
+      return Right(Leave.fromMap(res.dataMap));
+    } on ApiException catch (e) {
+      return Left(_leaveError(e));
     }
+  }
+
+  /// `POST /api/leaves/{id}/cancel`
+  Future<Either<String, String>> cancelLeave(int id) async {
+    try {
+      final res = await _api.post('/api/leaves/$id/cancel');
+      return Right(res.message.isEmpty
+          ? 'Pengajuan berhasil dibatalkan.'
+          : res.message);
+    } on ApiException catch (e) {
+      return Left(e.message);
+    }
+  }
+
+  /// `POST /api/leaves/{id}/approve` — khusus admin/manager/hr.
+  Future<Either<String, String>> approveLeave(int id, {String? notes}) async {
+    try {
+      final res = await _api.post(
+        '/api/leaves/$id/approve',
+        body: {if (notes != null && notes.isNotEmpty) 'notes': notes},
+      );
+      return Right(
+          res.message.isEmpty ? 'Pengajuan disetujui.' : res.message);
+    } on ApiException catch (e) {
+      return Left(e.message);
+    }
+  }
+
+  /// `POST /api/leaves/{id}/reject` — `notes` wajib berisi alasan penolakan.
+  Future<Either<String, String>> rejectLeave(int id, String notes) async {
+    try {
+      final res = await _api.post(
+        '/api/leaves/$id/reject',
+        body: {'notes': notes},
+      );
+      return Right(res.message.isEmpty ? 'Pengajuan ditolak.' : res.message);
+    } on ApiException catch (e) {
+      return Left(e.message);
+    }
+  }
+
+  /// Sisipkan sisa kuota ke pesan penolakan agar pengguna tahu berapa yang
+  /// tersisa tanpa membuka halaman lain.
+  String _leaveError(ApiException e) {
+    final remaining = e.numberFrom('remaining_days');
+    final requested = e.numberFrom('requested_days');
+    if (remaining == null || requested == null) return e.message;
+    return '${e.message} Sisa kuota ${remaining.round()} hari, '
+        'diajukan ${requested.round()} hari.';
   }
 }

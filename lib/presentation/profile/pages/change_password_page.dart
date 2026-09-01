@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_absensi_app/data/datasources/user_remote_datasource.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -396,12 +397,19 @@ class _ChangePasswordPageState extends State<ChangePasswordPage>
 
                     if (newPassword != confirmPassword) {
                       context.showError(
-                          'Password baru dan konfirmasi tidak cocok');
+                          'Konfirmasi password baru tidak sesuai.');
                       return;
                     }
 
-                    if (newPassword.length < 8) {
-                      context.showError('Password minimal 8 karakter');
+                    // Aturan yang sama dengan validasi server: minimal 8
+                    // karakter, mengandung huruf dan angka, dan berbeda dari
+                    // password lama.
+                    final invalid = UserRemoteDatasource.validateNewPassword(
+                      newPassword,
+                      oldPassword,
+                    );
+                    if (invalid != null) {
+                      context.showError(invalid);
                       return;
                     }
 

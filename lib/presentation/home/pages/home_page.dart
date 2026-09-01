@@ -1,22 +1,16 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_absensi_app/core/constants/variables.dart';
-import 'package:flutter_absensi_app/core/helper/radius_calculate.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/data/models/response/auth_response_model.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/get_company/get_company_bloc.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/is_checkedin/is_checkedin_bloc.dart';
-import 'package:flutter_absensi_app/presentation/home/pages/attandences/face_detector_checkin_page.dart';
-import 'package:flutter_absensi_app/presentation/home/pages/attandences/attendance_result_page.dart';
-import 'package:flutter_absensi_app/presentation/home/pages/attandences/scanner_page.dart';
+import 'package:flutter_absensi_app/core/ml/face_engine_provider.dart';
+import 'package:flutter_absensi_app/presentation/home/pages/attandences/attendance_page.dart';
 import 'package:flutter_absensi_app/presentation/leaves/pages/leave_page.dart';
 import 'package:flutter_absensi_app/presentation/overtimes/pages/overtime_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:location/location.dart';
+import 'package:flutter_absensi_app/core/helper/location_helper.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/core.dart';
@@ -35,7 +29,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   double? latitude;
   double? longitude;
   String? _currentLocationAddress;
-  String _userWorkMode = '';
+
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -57,7 +51,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     context.read<GetUserBloc>().add(const GetUserEvent.getUser());
 
     getCurrentPosition();
-    _loadUserWorkMode();
     _startAnimations();
   }
 
@@ -131,65 +124,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> getCurrentPosition() async {
-    try {
-      Location location = Location();
-      bool serviceEnabled;
-      PermissionStatus permissionGranted;
-      LocationData locationData;
+    final position = await LocationHelper.tryCurrent();
+    if (position == null || !mounted) return;
 
-      serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) return;
-      }
+    latitude = position.latitude;
+    longitude = position.longitude;
+    setState(() {});
 
-      permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) return;
-      }
-
-      locationData = await location.getLocation();
-      latitude = locationData.latitude;
-      longitude = locationData.longitude;
-      if (latitude != null && longitude != null) {
-        _currentLocationAddress =
-            await _getAddressFromCoordinates(latitude!, longitude!);
-      }
-      setState(() {});
-    } on PlatformException catch (e) {
-      if (e.code == 'IO_ERROR') {
-        debugPrint('Network error occurred: ${e.message}');
-      } else {
-        debugPrint('Failed to lookup coordinates: ${e.message}');
-      }
-    } catch (e) {
-      debugPrint('Unknown error occurred: $e');
-    }
-  }
-
-  Future<String?> _getAddressFromCoordinates(
-      double lat, double lon) async {
-    try {
-      final url = Uri.parse(
-          'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&addressdetails=1');
-      final response = await http.get(url, headers: {'User-Agent': 'FlutterAbsensiApp/1.0'});
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final address = data['address'];
-        final parts = <String>[];
-        if (address['road'] != null) parts.add(address['road']);
-        if (address['suburb'] != null || address['village'] != null) {
-          parts.add(address['suburb'] ?? address['village'] ?? address['hamlet']);
-        }
-        if (address['city'] != null || address['town'] != null || address['city_district'] != null) {
-          parts.add(address['city'] ?? address['town'] ?? address['city_district']);
-        }
-        if (address['state'] != null) parts.add(address['state']);
-        if (parts.isNotEmpty) return parts.join(', ');
-      }
-    } catch (_) {}
-    return null;
+    // Reverse geocoding dijalankan setelah koordinat tampil supaya kartu
+    // lokasi tidak menunggu request jaringan tambahan.
+    final address = await LocationHelper.addressOf(
+      position.latitude,
+      position.longitude,
+    );
+    if (!mounted) return;
+    setState(() => _currentLocationAddress = address);
   }
 
   Future<void> _initializeFaceEmbedding() async {
@@ -206,21 +155,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _loadUserWorkMode() async {
-    final authData = await AuthLocalDatasource().getAuthData();
-    if (!mounted) return;
-    setState(() {
-      _userWorkMode = authData?.user?.workMode ?? authData?.workMode ?? '';
-    });
-  }
-
-  bool _isRemoteWorkMode() {
-    final normalized = _userWorkMode.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
-    return normalized == 'wfh' ||
-        normalized == 'wfa' ||
-        normalized == 'remote' ||
-        normalized == 'work_from_home';
-  }
 
   Future<void> _onRefresh() async {
     // Refresh all data
@@ -230,7 +164,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // Refresh face embedding
     await _initializeFaceEmbedding();
-    await _loadUserWorkMode();
     await getCurrentPosition();
 
     // Wait a bit for the blocs to process
@@ -633,15 +566,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 5),
           ),
@@ -653,7 +586,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(28),
             ),
             child: const Center(
@@ -676,7 +609,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   height: 20,
                   width: 120,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -685,7 +618,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   height: 14,
                   width: 180,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(7),
                   ),
                 ),
@@ -726,7 +659,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -837,7 +770,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: const Color(0xFF1e3c72).withOpacity(0.08),
+            color: const Color(0xFF1e3c72).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -891,7 +824,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -973,22 +906,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildAttendanceButton({required bool isCheckIn}) {
     return BlocBuilder<GetCompanyBloc, GetCompanyState>(
-      builder: (context, state) {
-        final latitudePoint = state.maybeWhen(
-          orElse: () => 0.0,
-          success: (data) => double.parse(data.latitude!),
-        );
-        final longitudePoint = state.maybeWhen(
-          orElse: () => 0.0,
-          success: (data) => double.parse(data.longitude!),
-        );
-        final radiusPoint = state.maybeWhen(
-          orElse: () => 0.0,
-          success: (data) => double.parse(data.radiusKm!),
-        );
-        final attendanceType = state.maybeWhen(
-          orElse: () => 'Lokasi',
-          success: (data) => data.attendanceType!,
+      builder: (context, companyState) {
+        final attendanceType = companyState.maybeWhen(
+          orElse: () => 'location_based_only',
+          success: (data) => data.attendanceType ?? 'location_based_only',
         );
 
         return BlocBuilder<IsCheckedinBloc, IsCheckedinState>(
@@ -1006,15 +927,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               isCheckIn: isCheckIn,
               isCheckedin: isCheckedin,
               isCheckout: isCheckout,
-              onPressed: () => _handleAttendance(
-                isCheckIn: isCheckIn,
-                isCheckedin: isCheckedin,
-                isCheckout: isCheckout,
-                latitudePoint: latitudePoint,
-                longitudePoint: longitudePoint,
-                radiusPoint: radiusPoint,
-                attendanceType: attendanceType,
-              ),
+              onPressed: () =>
+                  _openAttendance(attendanceType: attendanceType),
             );
           },
         );
@@ -1022,371 +936,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFaceAttendanceButton() {
-    return BlocBuilder<IsCheckedinBloc, IsCheckedinState>(
-      builder: (context, state) {
-        final isCheckout = state.maybeWhen(
-          orElse: () => false,
-          success: (data) => data.isCheckedout,
-        );
-        final isCheckIn = state.maybeWhen(
-          orElse: () => false,
-          success: (data) => data.isCheckedin,
-        );
-
-        return BlocBuilder<GetCompanyBloc, GetCompanyState>(
-          builder: (context, state) {
-            final latitudePoint = state.maybeWhen(
-              orElse: () => 0.0,
-              success: (data) => double.parse(data.latitude!),
-            );
-            final longitudePoint = state.maybeWhen(
-              orElse: () => 0.0,
-              success: (data) => double.parse(data.longitude!),
-            );
-            final radiusPoint = state.maybeWhen(
-              orElse: () => 0.0,
-              success: (data) => double.parse(data.radiusKm!),
-            );
-
-            String buttonText = 'Kehadiran Hari Ini';
-            if (!isCheckIn) {
-              buttonText = 'Masuk dengan Wajah';
-            } else if (!isCheckout) {
-              buttonText = 'Pulang dengan Wajah';
-            } else {
-              buttonText = 'Kehadiran Selesai';
-            }
-
-            return Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1e3c72),
-                    Color(0xFF3b82c9),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1e3c72).withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => _handleFaceAttendance(
-                    isCheckIn: isCheckIn,
-                    isCheckout: isCheckout,
-                    latitudePoint: latitudePoint,
-                    longitudePoint: longitudePoint,
-                    radiusPoint: radiusPoint,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Assets.icons.attendance.svg(
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                          width: 24,
-                          height: 24,
-                        ),
-                        const SpaceWidth(12),
-                        Text(
-                          buttonText,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _handleAttendance({
-    required bool isCheckIn,
-    required bool isCheckedin,
-    required bool isCheckout,
-    required double latitudePoint,
-    required double longitudePoint,
-    required double radiusPoint,
-    required String attendanceType,
-  }) async {
-    try {
-      // Check face embedding FIRST for Face attendance type
-      if (attendanceType == 'pengenalan_wajah_saja' ||
-          attendanceType == 'hybrid') {
-        if (faceEmbedding == null || faceEmbedding!.isEmpty) {
-          _showRegisterFaceDialog();
-          return;
-        }
-      }
-
-      // THEN check location and other validations
-      final distanceKm = RadiusCalculate.calculateDistance(
-        latitude ?? 0.0,
-        longitude ?? 0.0,
-        latitudePoint,
-        longitudePoint,
-      );
-
-      final position = await Geolocator.getCurrentPosition();
-
-      if (position.isMocked) {
-        _showFakeGpsDialog();
-        return;
-      }
-
-      if (!_isRemoteWorkMode() &&
-          distanceKm > radiusPoint &&
-          (attendanceType == 'location_based_only' ||
-              attendanceType == 'hybrid')) {
-        _showOutOfAreaDialog(
-          distance: distanceKm,
-          allowedRadius: radiusPoint,
-        );
-        return;
-      }
-
-      if (isCheckIn) {
-        if (isCheckedin) {
-          _showModernDialog(
-            'Sudah Absen Masuk',
-            'Anda sudah melakukan absen masuk hari ini.',
-            Icons.check_circle_rounded,
-            Colors.green,
-          );
-          return;
-        }
-      } else {
-        if (!isCheckedin) {
-          _showModernDialog(
-            'Absen Masuk Diperlukan',
-            'Silakan absen masuk terlebih dahulu sebelum absen pulang.',
-            Icons.info_rounded,
-            Colors.blue,
-          );
-          return;
-        }
-        if (isCheckout) {
-          _showModernDialog(
-            'Sudah Absen Pulang',
-            'Anda sudah melakukan absen pulang hari ini.',
-            Icons.check_circle_rounded,
-            Colors.green,
-          );
-          return;
-        }
-      }
-
-      _navigateToAttendance(attendanceType, isCheckIn);
-    } catch (e) {
-      _showModernDialog(
-        'Terjadi Kesalahan',
-        'Terjadi kesalahan: $e',
-        Icons.error_rounded,
-        Colors.red,
-      );
+  /// Buka halaman presensi.
+  ///
+  /// Seluruh validasi — radius, fake GPS, sudah absen, sedang cuti, wajib
+  /// foto/catatan — kini ditentukan server lewat `GET /api/attendance/pre-check`
+  /// dan ditampilkan di [AttendancePage], jadi aplikasi tidak lagi menebak
+  /// aturannya sendiri.
+  Future<void> _openAttendance({required String attendanceType}) async {
+    // Pengenalan wajah tetap butuh wajah terdaftar sebelum kamera dibuka.
+    final needsFace = attendanceType == 'pengenalan_wajah_saja' ||
+        attendanceType == 'face_recognition_only' ||
+        attendanceType == 'hybrid';
+    if (needsFace &&
+        FaceEngineProvider.isSupported &&
+        (faceEmbedding == null || faceEmbedding!.isEmpty)) {
+      _showRegisterFaceDialog();
+      return;
     }
+
+    await _checkBackendAndNavigate(() {
+      context.push(const AttendancePage()).then((_) {
+        if (mounted) _onRefresh();
+      });
+    });
   }
 
-  Future<void> _handleFaceAttendance({
-    required bool isCheckIn,
-    required bool isCheckout,
-    required double latitudePoint,
-    required double longitudePoint,
-    required double radiusPoint,
-  }) async {
-    try {
-      final distanceKm = RadiusCalculate.calculateDistance(
-        latitude ?? 0.0,
-        longitude ?? 0.0,
-        latitudePoint,
-        longitudePoint,
-      );
 
-      final position = await Geolocator.getCurrentPosition();
-
-      if (position.isMocked) {
-        _showModernSnackBar(
-          'Anda menggunakan lokasi palsu (fake GPS)',
-          Icons.error_outline,
-          Colors.red,
-        );
-        return;
-      }
-
-      if (!_isRemoteWorkMode() && distanceKm > radiusPoint) {
-        _showModernSnackBar(
-          'Anda berada di luar area absensi',
-          Icons.location_off,
-          Colors.orange,
-        );
-        return;
-      }
-
-      if (!isCheckIn) {
-        await _checkBackendAndNavigate(() {
-          context.push(FaceDetectorCheckinPage(
-            isCheckedIn: true,
-            latitude: latitude,
-            longitude: longitude,
-          ));
-        });
-      } else if (!isCheckout) {
-        await _checkBackendAndNavigate(() {
-          context.push(FaceDetectorCheckinPage(
-            isCheckedIn: false,
-            latitude: latitude,
-            longitude: longitude,
-          ));
-        });
-      } else {
-        _showModernSnackBar(
-          'Anda telah menyelesaikan absensi hari ini',
-          Icons.check_circle,
-          Colors.green,
-        );
-      }
-    } catch (e) {
-      _showModernSnackBar(
-        'Kesalahan: $e',
-        Icons.error,
-        Colors.red,
-      );
-    }
-  }
-
-  void _showModernDialog(
-      String title, String message, IconData icon, Color color) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 32,
-                ),
-              ),
-              const SpaceHeight(16),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SpaceHeight(8),
-              Text(
-                message,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SpaceHeight(24),
-              Container(
-                width: double.infinity,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      color,
-                      color.withOpacity(0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => Navigator.pop(context),
-                    child: Center(
-                      child: Text(
-                        'OK',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showModernSnackBar(String message, IconData icon, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white),
-            const SpaceWidth(8),
-            Expanded(
-              child: Text(
-                message,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
 
   Future<void> _checkBackendAndNavigate(Function navigate) async {
     // Show loading indicator
@@ -1424,29 +999,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _navigateToAttendance(
-      String attendanceType, bool isCheckIn) async {
-    await _checkBackendAndNavigate(() {
-      if (attendanceType == 'face_recognition_only' ||
-          attendanceType == 'hybrid') {
-        context.push(FaceDetectorCheckinPage(
-          isCheckedIn: isCheckIn,
-          latitude: latitude,
-          longitude: longitude,
-        ));
-      } else {
-        // For location_based_only and other types, pass lat/long
-        context.push(AttendanceResultPage(
-          isCheckin: isCheckIn,
-          isMatch: true,
-          attendanceType: attendanceType,
-          latitude: latitude,
-          longitude: longitude,
-        ));
-      }
-    });
-  }
-
   void _showRegisterFaceDialog() {
     showDialog(
       context: context,
@@ -1466,7 +1018,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1e3c72).withOpacity(0.1),
+                  color: const Color(0xFF1e3c72).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(50),
                 ),
                 child: const Icon(
@@ -1568,392 +1120,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _showFakeGpsDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.red.withOpacity(0.1),
-                      Colors.red.withOpacity(0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(60),
-                  border: Border.all(
-                    color: Colors.red.withOpacity(0.2),
-                    width: 2,
-                  ),
-                ),
-                child: Icon(
-                  Icons.gps_off_rounded,
-                  color: Colors.red[700],
-                  size: 48,
-                ),
-              ),
-              const SpaceHeight(24),
-              Text(
-                'Fake GPS Terdeteksi!',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[900],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SpaceHeight(12),
-              Text(
-                'Sistem mendeteksi bahwa HP Anda menggunakan aplikasi fake GPS atau mock location.',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SpaceHeight(8),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.orange.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: Colors.orange[700],
-                      size: 20,
-                    ),
-                    const SpaceWidth(12),
-                    Expanded(
-                      child: Text(
-                        'Harap nonaktifkan fake GPS terlebih dahulu untuk melanjutkan absensi.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.orange[800],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SpaceHeight(28),
-              Container(
-                width: double.infinity,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.red[600]!,
-                      Colors.red[700]!,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => Navigator.pop(context),
-                    child: Center(
-                      child: Text(
-                        'Mengerti',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  void _showOutOfAreaDialog({
-    required double distance,
-    required double allowedRadius,
-  }) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.orange.withOpacity(0.1),
-                      Colors.orange.withOpacity(0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(60),
-                  border: Border.all(
-                    color: Colors.orange.withOpacity(0.2),
-                    width: 2,
-                  ),
-                ),
-                child: Icon(
-                  Icons.location_off_rounded,
-                  color: Colors.orange[700],
-                  size: 48,
-                ),
-              ),
-              const SpaceHeight(24),
-              Text(
-                'Lokasi Di Luar Area!',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[900],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SpaceHeight(12),
-              Text(
-                'Anda berada di luar jangkauan area absensi yang telah ditentukan oleh kantor.',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SpaceHeight(16),
-              // Distance information box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.red.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.straighten_rounded,
-                          color: Colors.red[700],
-                          size: 20,
-                        ),
-                        const SpaceWidth(8),
-                        Text(
-                          'Informasi Jarak',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SpaceHeight(12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Jarak Anda:',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        Text(
-                          '${distance.toStringAsFixed(2)} km',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.red[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SpaceHeight(6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Radius Maksimal:',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        Text(
-                          '${allowedRadius.toStringAsFixed(2)} km',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SpaceHeight(6),
-                    Container(
-                      width: double.infinity,
-                      height: 1,
-                      color: Colors.red.withOpacity(0.2),
-                    ),
-                    const SpaceHeight(6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Kelebihan Jarak:',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        Text(
-                          '${(distance - allowedRadius).toStringAsFixed(2)} km',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.red[900],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SpaceHeight(12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.blue.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: Colors.blue[700],
-                      size: 20,
-                    ),
-                    const SpaceWidth(12),
-                    Expanded(
-                      child: Text(
-                        'Harap mendekat ke lokasi kantor untuk dapat melakukan absensi.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.blue[800],
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SpaceHeight(28),
-              Container(
-                width: double.infinity,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.orange[600]!,
-                      Colors.orange[700]!,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => Navigator.pop(context),
-                    child: Center(
-                      child: Text(
-                        'Mengerti',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildModernMenuButton({
     required IconData icon,
@@ -1971,7 +1138,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: gradient.colors.first.withOpacity(0.3),
+              color: gradient.colors.first.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -1983,10 +1150,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -2012,7 +1179,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             //   style: GoogleFonts.poppins(
             //     fontSize: 11,
             //     fontWeight: FontWeight.w400,
-            //     color: Colors.white.withOpacity(0.8),
+            //     color: Colors.white.withValues(alpha: 0.8),
             //   ),
             //   textAlign: TextAlign.center,
             // ),
@@ -2032,7 +1199,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         isCheckIn ? isCheckedin : !isCheckedin || isCheckout;
 
     final String label = isCheckIn ? 'Masuk' : 'Pulang';
-    final String subtitle = isCheckIn ? 'Start your day' : 'End your day';
     final IconData icon =
         isCheckIn ? Icons.login_rounded : Icons.logout_rounded;
 
@@ -2053,8 +1219,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           boxShadow: [
             BoxShadow(
               color: isDisabled
-                  ? Colors.grey.withOpacity(0.3)
-                  : gradient.colors.first.withOpacity(0.3),
+                  ? Colors.grey.withValues(alpha: 0.3)
+                  : gradient.colors.first.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -2066,10 +1232,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),

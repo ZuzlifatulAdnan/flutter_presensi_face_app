@@ -1,9 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_absensi_app/presentation/home/pages/main_page.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +11,6 @@ import 'package:flutter_absensi_app/core/core.dart';
 
 import '../../bloc/check_qr/check_qr_bloc.dart';
 import '../../bloc/get_qrcode_checkin/get_qrcode_checkin_bloc.dart';
-import '../../bloc/get_qrcode_checkout/get_qrcode_checkout_bloc.dart';
 import 'attendance_result_page.dart';
 
 class ScannerPage extends StatefulWidget {
@@ -31,7 +28,6 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
   MobileScannerController cameraController = MobileScannerController(
     autoStart: true,
     torchEnabled: false,
-    useNewCameraSelector: true,
   );
 
   Barcode? _barcode;
@@ -180,6 +176,9 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                     icon = const Icon(Icons.camera_front);
                   case CameraFacing.back:
                     icon = const Icon(Icons.camera_rear);
+                  case CameraFacing.external:
+                  case CameraFacing.unknown:
+                    icon = const Icon(Icons.videocam_rounded);
                 }
 
                 return IconButton(
@@ -252,7 +251,7 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
               alignment: Alignment.bottomCenter,
               child: Container(
                 padding: const EdgeInsets.all(16.0),
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: _buildBarcode(_barcode),
               ),
             ),

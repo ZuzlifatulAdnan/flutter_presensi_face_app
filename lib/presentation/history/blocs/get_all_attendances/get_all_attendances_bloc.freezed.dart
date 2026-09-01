@@ -53,6 +53,7 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Started value)? started,
     TResult Function(_GetAllAttendances value)? getAllAttendances,
+    TResult Function(_Filter value)? filter,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -61,6 +62,8 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
         return started(_that);
       case _GetAllAttendances() when getAllAttendances != null:
         return getAllAttendances(_that);
+      case _Filter() when filter != null:
+        return filter(_that);
       case _:
         return orElse();
     }
@@ -83,6 +86,7 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
   TResult map<TResult extends Object?>({
     required TResult Function(_Started value) started,
     required TResult Function(_GetAllAttendances value) getAllAttendances,
+    required TResult Function(_Filter value) filter,
   }) {
     final _that = this;
     switch (_that) {
@@ -90,6 +94,8 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
         return started(_that);
       case _GetAllAttendances():
         return getAllAttendances(_that);
+      case _Filter():
+        return filter(_that);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -111,6 +117,7 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Started value)? started,
     TResult? Function(_GetAllAttendances value)? getAllAttendances,
+    TResult? Function(_Filter value)? filter,
   }) {
     final _that = this;
     switch (_that) {
@@ -118,6 +125,8 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
         return started(_that);
       case _GetAllAttendances() when getAllAttendances != null:
         return getAllAttendances(_that);
+      case _Filter() when filter != null:
+        return filter(_that);
       case _:
         return null;
     }
@@ -139,6 +148,9 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? started,
     TResult Function()? getAllAttendances,
+    TResult Function(String? date, int? month, int? year, String? status,
+            String? workMode)?
+        filter,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -147,6 +159,9 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
         return started();
       case _GetAllAttendances() when getAllAttendances != null:
         return getAllAttendances();
+      case _Filter() when filter != null:
+        return filter(
+            _that.date, _that.month, _that.year, _that.status, _that.workMode);
       case _:
         return orElse();
     }
@@ -169,6 +184,9 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
   TResult when<TResult extends Object?>({
     required TResult Function() started,
     required TResult Function() getAllAttendances,
+    required TResult Function(String? date, int? month, int? year,
+            String? status, String? workMode)
+        filter,
   }) {
     final _that = this;
     switch (_that) {
@@ -176,6 +194,9 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
         return started();
       case _GetAllAttendances():
         return getAllAttendances();
+      case _Filter():
+        return filter(
+            _that.date, _that.month, _that.year, _that.status, _that.workMode);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -197,6 +218,9 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? started,
     TResult? Function()? getAllAttendances,
+    TResult? Function(String? date, int? month, int? year, String? status,
+            String? workMode)?
+        filter,
   }) {
     final _that = this;
     switch (_that) {
@@ -204,6 +228,9 @@ extension GetAllAttendancesEventPatterns on GetAllAttendancesEvent {
         return started();
       case _GetAllAttendances() when getAllAttendances != null:
         return getAllAttendances();
+      case _Filter() when filter != null:
+        return filter(
+            _that.date, _that.month, _that.year, _that.status, _that.workMode);
       case _:
         return null;
     }
@@ -247,6 +274,99 @@ class _GetAllAttendances implements GetAllAttendancesEvent {
   @override
   String toString() {
     return 'GetAllAttendancesEvent.getAllAttendances()';
+  }
+}
+
+/// @nodoc
+
+class _Filter implements GetAllAttendancesEvent {
+  const _Filter({this.date, this.month, this.year, this.status, this.workMode});
+
+  final String? date;
+  final int? month;
+  final int? year;
+  final String? status;
+  final String? workMode;
+
+  /// Create a copy of GetAllAttendancesEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$FilterCopyWith<_Filter> get copyWith =>
+      __$FilterCopyWithImpl<_Filter>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _Filter &&
+            (identical(other.date, date) || other.date == date) &&
+            (identical(other.month, month) || other.month == month) &&
+            (identical(other.year, year) || other.year == year) &&
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.workMode, workMode) ||
+                other.workMode == workMode));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, date, month, year, status, workMode);
+
+  @override
+  String toString() {
+    return 'GetAllAttendancesEvent.filter(date: $date, month: $month, year: $year, status: $status, workMode: $workMode)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$FilterCopyWith<$Res>
+    implements $GetAllAttendancesEventCopyWith<$Res> {
+  factory _$FilterCopyWith(_Filter value, $Res Function(_Filter) _then) =
+      __$FilterCopyWithImpl;
+  @useResult
+  $Res call(
+      {String? date, int? month, int? year, String? status, String? workMode});
+}
+
+/// @nodoc
+class __$FilterCopyWithImpl<$Res> implements _$FilterCopyWith<$Res> {
+  __$FilterCopyWithImpl(this._self, this._then);
+
+  final _Filter _self;
+  final $Res Function(_Filter) _then;
+
+  /// Create a copy of GetAllAttendancesEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? date = freezed,
+    Object? month = freezed,
+    Object? year = freezed,
+    Object? status = freezed,
+    Object? workMode = freezed,
+  }) {
+    return _then(_Filter(
+      date: freezed == date
+          ? _self.date
+          : date // ignore: cast_nullable_to_non_nullable
+              as String?,
+      month: freezed == month
+          ? _self.month
+          : month // ignore: cast_nullable_to_non_nullable
+              as int?,
+      year: freezed == year
+          ? _self.year
+          : year // ignore: cast_nullable_to_non_nullable
+              as int?,
+      status: freezed == status
+          ? _self.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String?,
+      workMode: freezed == workMode
+          ? _self.workMode
+          : workMode // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
   }
 }
 

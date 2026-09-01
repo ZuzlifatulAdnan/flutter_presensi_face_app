@@ -2,7 +2,6 @@ import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:flutter_absensi_app/data/datasources/overtime_remote_datasource.dart';
-import 'package:flutter_absensi_app/data/models/response/overtime_response_model.dart';
 
 part 'end_overtime_bloc.freezed.dart';
 part 'end_overtime_event.dart';

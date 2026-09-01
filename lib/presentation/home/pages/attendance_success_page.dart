@@ -7,10 +7,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/core.dart';
 
 class AttendanceSuccessPage extends StatefulWidget {
+  /// 'datang' atau 'pulang'.
   final String status;
+
+  /// Pesan dari server — sudah berbahasa Indonesia dan aman ditampilkan.
+  final String? message;
+
   const AttendanceSuccessPage({
     super.key,
     required this.status,
+    this.message,
   });
 
   @override
@@ -113,7 +119,7 @@ class _AttendanceSuccessPageState extends State<AttendanceSuccessPage>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
@@ -145,6 +151,27 @@ class _AttendanceSuccessPageState extends State<AttendanceSuccessPage>
                   ),
                 ),
 
+                // Pesan dari server ditampilkan apa adanya — sudah berbahasa
+                // Indonesia dan aman untuk pengguna.
+                if (widget.message != null && widget.message!.isNotEmpty) ...[
+                  const SpaceHeight(8),
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        widget.message!,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
                 const SpaceHeight(8),
 
                 // Status Badge
@@ -156,10 +183,10 @@ class _AttendanceSuccessPageState extends State<AttendanceSuccessPage>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -199,7 +226,7 @@ class _AttendanceSuccessPageState extends State<AttendanceSuccessPage>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -282,13 +309,13 @@ class _AttendanceSuccessPageState extends State<AttendanceSuccessPage>
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: isCheckIn
-                                ? const Color(0xFF4CAF50).withOpacity(0.1)
-                                : const Color(0xFF2196F3).withOpacity(0.1),
+                                ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
+                                : const Color(0xFF2196F3).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: isCheckIn
-                                  ? const Color(0xFF4CAF50).withOpacity(0.3)
-                                  : const Color(0xFF2196F3).withOpacity(0.3),
+                                  ? const Color(0xFF4CAF50).withValues(alpha: 0.3)
+                                  : const Color(0xFF2196F3).withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
@@ -349,7 +376,7 @@ class _AttendanceSuccessPageState extends State<AttendanceSuccessPage>
                           color: (isCheckIn
                                   ? const Color(0xFF4CAF50)
                                   : const Color(0xFF2196F3))
-                              .withOpacity(0.3),
+                              .withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),

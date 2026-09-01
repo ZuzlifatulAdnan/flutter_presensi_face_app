@@ -52,13 +52,13 @@ class _MainPageState extends State<MainPage> {
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1e3c72).withOpacity(0.3),
+            color: const Color(0xFF1e3c72).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             blurRadius: 1,
             offset: const Offset(0, 1),
             spreadRadius: 0,
@@ -72,10 +72,10 @@ class _MainPageState extends State<MainPage> {
           child: Container(
             height: 70,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -122,11 +122,11 @@ class _MainPageState extends State<MainPage> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color:
-              isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+              isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
           border: isSelected
               ? Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   width: 1,
                 )
               : null,
@@ -139,14 +139,14 @@ class _MainPageState extends State<MainPage> {
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.15)
+                    ? Colors.white.withValues(alpha: 0.15)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
                 color:
-                    isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+                    isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6),
                 size: 22,
               ),
             ),
@@ -157,7 +157,7 @@ class _MainPageState extends State<MainPage> {
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color:
-                    isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+                    isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6),
               ),
             ),
           ],

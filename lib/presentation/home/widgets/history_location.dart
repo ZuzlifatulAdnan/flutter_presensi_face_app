@@ -94,7 +94,7 @@ class HistoryLocation extends StatelessWidget {
           ),
           const SpaceHeight(12.0),
           Button.filled(
-            color: AppColors.white.withOpacity(0.5),
+            color: AppColors.white.withValues(alpha: 0.5),
             onPressed: () {
               context.push(LocationPage(
                 latitude: latitude,

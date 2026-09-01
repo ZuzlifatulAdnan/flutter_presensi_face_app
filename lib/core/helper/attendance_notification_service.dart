@@ -1,13 +1,13 @@
-import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 /// Service untuk mengelola notifikasi pengingat absen sesuai shift kerja.
-/// Notifikasi akan muncul 15 menit sebelum jam masuk shift.
+/// - Absen masuk: 15 menit sebelum jam mulai shift.
+/// - Absen pulang: tepat pada jam selesai shift.
 class AttendanceNotificationService {
   static final AttendanceNotificationService _instance =
       AttendanceNotificationService._internal();
@@ -17,11 +17,12 @@ class AttendanceNotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const int _reminderNotificationId = 1001;
+  static const int _checkInReminderId = 1001;
+  static const int _checkOutReminderId = 1002;
   static const String _channelId = 'attendance_reminder';
   static const String _channelName = 'Pengingat Absen';
   static const String _channelDesc =
-      'Notifikasi pengingat untuk absen masuk sesuai shift kerja';
+      'Notifikasi pengingat absen masuk dan pulang sesuai shift kerja';
 
   bool _initialized = false;
 
@@ -29,7 +30,6 @@ class AttendanceNotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // Inisialisasi timezone
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
@@ -48,14 +48,13 @@ class AttendanceNotificationService {
     );
 
     await _plugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
         debugPrint('Notifikasi diklik: ${details.payload}');
       },
     );
 
-    // Request izin notifikasi Android 13+
-    if (Platform.isAndroid) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
@@ -67,39 +66,70 @@ class AttendanceNotificationService {
     debugPrint('[AttendanceNotification] Initialized');
   }
 
-  /// Jadwalkan notifikasi pengingat absen 15 menit sebelum jam masuk shift.
-  /// [shiftStartTime] format "HH:mm" contoh "08:00"
-  /// [shiftName] nama shift untuk ditampilkan di notifikasi
+  /// Jadwalkan notifikasi pengingat absen masuk dan pulang.
+  /// [shiftStartTime] dan [shiftEndTime] menerima format apapun yang mengandung
+  /// pola "HH:mm" (mis. "08:00", "08:00:00", atau ISO 8601 dengan timezone).
   Future<void> scheduleShiftReminder({
     required String shiftStartTime,
+    String? shiftEndTime,
     String shiftName = 'Shift Kerja',
   }) async {
     if (!_initialized) await initialize();
 
-    // Batalkan jadwal sebelumnya
     await cancelShiftReminder();
 
-    // Parse jam dan menit dari shiftStartTime
-    final timeParts = shiftStartTime.trim().split(':');
-    if (timeParts.length < 2) {
+    final start = _parseTimeString(shiftStartTime);
+    if (start != null) {
+      await _scheduleAt(
+        id: _checkInReminderId,
+        hour: start.hour,
+        minute: start.minute,
+        offsetMinutes: -15,
+        title: '⏰ Pengingat Absen Masuk',
+        body:
+            '$shiftName dimulai pukul ${_formatHHmm(start.hour, start.minute)}. '
+            'Segera lakukan absen masuk agar tidak terlambat!',
+        payload: 'shift_check_in_reminder',
+      );
+    } else {
       debugPrint(
-          '[AttendanceNotification] Format waktu tidak valid: $shiftStartTime');
-      return;
+          '[AttendanceNotification] Gagal parse jam masuk: $shiftStartTime');
     }
 
-    final hour = int.tryParse(timeParts[0]);
-    final minute = int.tryParse(timeParts[1]);
-    if (hour == null || minute == null) {
-      debugPrint(
-          '[AttendanceNotification] Gagal parse waktu: $shiftStartTime');
-      return;
+    if (shiftEndTime != null && shiftEndTime.isNotEmpty) {
+      final end = _parseTimeString(shiftEndTime);
+      if (end != null) {
+        await _scheduleAt(
+          id: _checkOutReminderId,
+          hour: end.hour,
+          minute: end.minute,
+          offsetMinutes: 0,
+          title: '🚪 Pengingat Absen Pulang',
+          body:
+              '$shiftName selesai pukul ${_formatHHmm(end.hour, end.minute)}. '
+              'Jangan lupa lakukan absen pulang!',
+          payload: 'shift_check_out_reminder',
+        );
+      } else {
+        debugPrint(
+            '[AttendanceNotification] Gagal parse jam pulang: $shiftEndTime');
+      }
     }
+  }
 
-    // Hitung waktu notifikasi = jam masuk - 15 menit
+  /// Jadwalkan satu notifikasi harian pada jam:menit + offsetMinutes.
+  Future<void> _scheduleAt({
+    required int id,
+    required int hour,
+    required int minute,
+    required int offsetMinutes,
+    required String title,
+    required String body,
+    required String payload,
+  }) async {
     final jakartaLocation = tz.getLocation('Asia/Jakarta');
     final now = tz.TZDateTime.now(jakartaLocation);
 
-    // Buat waktu target hari ini
     var scheduledDate = tz.TZDateTime(
       jakartaLocation,
       now.year,
@@ -107,20 +137,14 @@ class AttendanceNotificationService {
       now.day,
       hour,
       minute,
-    ).subtract(const Duration(minutes: 15));
+    ).add(Duration(minutes: offsetMinutes));
 
-    // Jika waktu sudah lewat, jadwalkan untuk hari berikutnya
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    debugPrint(
-        '[AttendanceNotification] Jadwal notifikasi pada: $scheduledDate');
-
-    // Pola getaran: diam, getar, diam, getar
     final vibrationPattern = Int64List.fromList([0, 500, 200, 500, 200, 500]);
 
-    // Detail notifikasi Android dengan nada kustom
     final androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,
@@ -150,31 +174,25 @@ class AttendanceNotificationService {
       iOS: darwinDetails,
     );
 
-    final shiftHourStr = hour.toString().padLeft(2, '0');
-    final shiftMinStr = minute.toString().padLeft(2, '0');
-
     await _plugin.zonedSchedule(
-      _reminderNotificationId,
-      '⏰ Pengingat Absen Masuk',
-      '$shiftName dimulai pukul $shiftHourStr:$shiftMinStr. '
-          'Segera lakukan absen masuk agar tidak terlambat!',
-      scheduledDate,
-      notificationDetails,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
-      payload: 'shift_reminder',
+      payload: payload,
     );
 
     debugPrint(
-        '[AttendanceNotification] Notifikasi dijadwalkan pukul $shiftHourStr:$shiftMinStr '
-        '(15 menit sebelum shift $shiftName)');
+        '[AttendanceNotification] id=$id dijadwalkan pada $scheduledDate');
   }
 
   /// Batalkan notifikasi pengingat absen yang sudah dijadwalkan.
   Future<void> cancelShiftReminder() async {
-    await _plugin.cancel(_reminderNotificationId);
+    await _plugin.cancel(id: _checkInReminderId);
+    await _plugin.cancel(id: _checkOutReminderId);
     debugPrint('[AttendanceNotification] Jadwal notifikasi dibatalkan');
   }
 
@@ -219,12 +237,44 @@ class AttendanceNotificationService {
     );
 
     await _plugin.show(
-      _reminderNotificationId,
-      '⏰ Pengingat Absen Masuk',
-      '$shiftName dimulai pukul $shiftStartTime. '
+      id: _checkInReminderId,
+      title: '⏰ Pengingat Absen Masuk',
+      body: '$shiftName dimulai pukul $shiftStartTime. '
           'Segera lakukan absen masuk agar tidak terlambat!',
-      notificationDetails,
-      payload: 'shift_reminder',
+      notificationDetails: notificationDetails,
+      payload: 'shift_check_in_reminder',
     );
   }
+
+  /// Ekstrak jam & menit lokal dari string apapun.
+  /// Diutamakan regex HH:mm supaya tidak salah ketika backend mengirim ISO 8601
+  /// dengan offset +07:00 (DateTime.parse otomatis normalisasi ke UTC, sehingga
+  /// .hour jadi mundur 7 jam).
+  static _HourMinute? _parseTimeString(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+
+    final m = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(trimmed);
+    if (m != null) {
+      final h = int.tryParse(m.group(1)!);
+      final mi = int.tryParse(m.group(2)!);
+      if (h != null && mi != null && h >= 0 && h < 24 && mi >= 0 && mi < 60) {
+        return _HourMinute(h, mi);
+      }
+    }
+
+    final dt = DateTime.tryParse(trimmed)?.toLocal();
+    if (dt != null) return _HourMinute(dt.hour, dt.minute);
+
+    return null;
+  }
+
+  static String _formatHHmm(int hour, int minute) =>
+      '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+}
+
+class _HourMinute {
+  final int hour;
+  final int minute;
+  const _HourMinute(this.hour, this.minute);
 }

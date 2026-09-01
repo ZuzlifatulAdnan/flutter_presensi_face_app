@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_absensi_app/core/config/app_config.dart';
 import 'package:flutter_absensi_app/core/helper/attendance_notification_service.dart';
+import 'package:flutter_absensi_app/data/datasources/app_settings_remote_datasource.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/data/models/response/auth_response_model.dart';
+import 'package:flutter_absensi_app/presentation/app/pages/app_gate_page.dart';
+import 'package:flutter_absensi_app/presentation/app/widgets/app_logo.dart';
 import 'package:flutter_absensi_app/presentation/home/pages/main_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -93,48 +97,82 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    // Jalankan pengecekan auth dan tunggu minimal waktu animasi (1.5 detik) secara bersamaan
+    // Pengaturan aplikasi dimuat lebih dulu: nama, logo, warna, mode
+    // pemeliharaan, dan versi minimum semuanya berasal dari sana.
     final results = await Future.wait([
+      AppSettingsRemoteDatasource().getAppSettings(),
       AuthLocalDatasource().isAuth(),
       AuthLocalDatasource().getAuthData(),
       Future.delayed(const Duration(milliseconds: 1500)),
     ]);
 
-    if (mounted) {
-      final isAuth = results[0] as bool;
-      final authData = results[1] as AuthResponseModel?;
+    if (!mounted) return;
 
-      if (isAuth) {
-        // Jadwalkan ulang notifikasi pengingat absen berdasarkan data shift
-        final shiftStart = authData?.user?.shiftKerja?.startTime ??
-            authData?.defaultShiftDetail?.startTime;
-        if (shiftStart != null && shiftStart.isNotEmpty) {
-          final shiftName = authData?.defaultShift?.name ??
-              authData?.user?.shiftKerja?.name ??
-              'Shift Kerja';
-          String parsedTime = shiftStart;
-          final dtParsed = DateTime.tryParse(shiftStart);
-          if (dtParsed != null) {
-            parsedTime =
-                '${dtParsed.hour.toString().padLeft(2, '0')}:${dtParsed.minute.toString().padLeft(2, '0')}';
-          } else {
-            final m =
-                RegExp(r'(\d{1,2}):(\d{2})').firstMatch(shiftStart);
-            if (m != null) {
-              parsedTime =
-                  '${m.group(1)!.padLeft(2, '0')}:${m.group(2)!}';
-            }
-          }
-          await AttendanceNotificationService().scheduleShiftReminder(
-            shiftStartTime: parsedTime,
-            shiftName: shiftName,
-          );
-        }
-        if (mounted) context.pushReplacement(const MainPage());
-      } else {
-        context.pushReplacement(const LoginPage());
-      }
+    // Pemeliharaan dan wajib-update menghentikan alur sebelum layar apa pun
+    // yang memerlukan API dibuka.
+    if (AppConfig.isUnderMaintenance) {
+      _replaceWith(
+        AppGatePage.maintenance(
+          settings: AppConfig.value.maintenance,
+          onRetry: _retry,
+        ),
+      );
+      return;
     }
+
+    if (AppConfig.mustUpdate) {
+      _replaceWith(
+        AppGatePage.forceUpdate(
+          version: AppConfig.value.version,
+          installedVersion: AppConfig.installedVersion,
+          onRetry: _retry,
+        ),
+      );
+      return;
+    }
+
+    final isAuth = results[1] as bool;
+    final authData = results[2] as AuthResponseModel?;
+
+    if (!isAuth) {
+      _replaceWith(const LoginPage());
+      return;
+    }
+
+    await _scheduleShiftReminder(authData);
+    if (!mounted) return;
+    _replaceWith(const MainPage());
+  }
+
+  void _replaceWith(Widget page) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
+
+  void _retry() {
+    if (!mounted) return;
+    _replaceWith(const SplashPage());
+  }
+
+  /// Jadwalkan ulang notifikasi pengingat absen berdasarkan data shift.
+  /// Service akan parse format jam apapun (HH:mm, HH:mm:ss, atau ISO).
+  Future<void> _scheduleShiftReminder(AuthResponseModel? authData) async {
+    final shiftStart = authData?.user?.shiftKerja?.startTime ??
+        authData?.defaultShiftDetail?.startTime;
+    if (shiftStart == null || shiftStart.isEmpty) return;
+
+    final shiftEnd = authData?.user?.shiftKerja?.endTime ??
+        authData?.defaultShiftDetail?.endTime;
+    final shiftName = authData?.defaultShift?.name ??
+        authData?.user?.shiftKerja?.name ??
+        'Shift Kerja';
+
+    await AttendanceNotificationService().scheduleShiftReminder(
+      shiftStartTime: shiftStart,
+      shiftEndTime: shiftEnd,
+      shiftName: shiftName,
+    );
   }
 
   @override
@@ -185,12 +223,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ],
               ),
-              child: Image.asset(
-                Assets.images.logoWhite.path,
-                width: 90,
-                height: 90,
-                fit: BoxFit.contain,
-              ),
+              child: const AppLogo(size: 90, light: true),
             ),
           ),
 
@@ -203,23 +236,27 @@ class _SplashPageState extends State<SplashPage>
               position: _slideAnimation,
               child: Column(
                 children: [
+                  // Nama & tagline mengikuti pengaturan dari server.
                   Text(
-                    'ABSEN DEVTECH',
+                    AppConfig.appName.toUpperCase(),
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: 30,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const SpaceHeight(8),
                   Text(
-                    'PRESENSI & KEPEGAWAIAN',
+                    (AppConfig.value.tagline ?? 'PRESENSI & KEPEGAWAIAN')
+                        .toUpperCase(),
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      letterSpacing: 3.0,
+                      letterSpacing: 2.0,
                     ),
                   ),
                   const SpaceHeight(24),
@@ -235,7 +272,8 @@ class _SplashPageState extends State<SplashPage>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      'Dinas Komunikasi dan Informatika Pringsewu',
+                      AppConfig.value.company.name ??
+                          'Dinas Komunikasi dan Informatika Pringsewu',
                       style: GoogleFonts.poppins(
                         color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 15,

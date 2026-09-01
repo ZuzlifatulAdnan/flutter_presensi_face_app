@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_absensi_app/core/constants/variables.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../assets/assets.gen.dart';
 import '../constants/colors.dart';
 import 'buttons.dart';
 import 'spaces.dart';
@@ -92,10 +91,10 @@ class _ImagePickerWidgetState extends State<ImagePickerWidget> {
                             )
                           : Container(
                               padding: const EdgeInsets.all(0.0),
-                              color: AppColors.black.withOpacity(0.05),
+                              color: AppColors.black.withValues(alpha: 0.05),
                               child: Icon(
                                 Icons.camera_alt,
-                                color: AppColors.black.withOpacity(0.3),
+                                color: AppColors.black.withValues(alpha: 0.3),
                                 size: 40.0,
                               ),
                             ),

@@ -22,20 +22,33 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+// Kredensial penandatanganan rilis. Berkas ini berisi rahasia, jadi tidak
+// ikut di-commit — salin android/key.properties.example lalu isi nilainya.
+// Tanpa berkas ini build rilis tetap jalan memakai kunci debug, tapi APK/AAB
+// hasilnya TIDAK bisa diunggah ke Play Console.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    keystorePropertiesFile.withReader('UTF-8') { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+
 android {
     namespace "com.jagoflutter.hris"
     compileSdk 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-        // Enable core library desugaring
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        // Dibutuhkan flutter_local_notifications untuk java.time di API < 26.
         coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     sourceSets {
@@ -43,25 +56,64 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.jagoflutter.hris"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
+        // ML Kit face detection membutuhkan minimal API 21; 24 dipakai agar
+        // sesuai dengan dependensi kamera dan TensorFlow Lite.
         minSdkVersion 24
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        // Play Store menolak APK dengan versionName kosong.
+        resourceConfigurations += ['in', 'en']
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseKeystore) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
-            minifyEnabled false
-            shrinkResources false
+            signingConfig hasReleaseKeystore
+                    ? signingConfigs.release
+                    : signingConfigs.debug
+            // Perkecil ukuran unduhan di Play Store. Aturan simpan untuk
+            // ML Kit dan TensorFlow Lite ada di proguard-rules.pro.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    // App Bundle memisahkan resource per perangkat; biarkan Play yang
+    // merakitnya kembali.
+    bundle {
+        language { enableSplit = true }
+        density { enableSplit = true }
+        abi { enableSplit = true }
+    }
+
+    packagingOptions {
+        // Model .tflite tidak boleh dikompresi agar bisa di-mmap saat runtime.
+        jniLibs { useLegacyPackaging = false }
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE*']
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
     }
 }
 
@@ -70,5 +122,5 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }

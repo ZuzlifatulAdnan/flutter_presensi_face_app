@@ -138,8 +138,14 @@ extension CreateLeaveEventPatterns on CreateLeaveEvent {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? started,
-    TResult Function(int leaveTypeId, String startDate, String endDate,
-            String reason, File? attachment)?
+    TResult Function(
+            int leaveTypeId,
+            String startDate,
+            String endDate,
+            String reason,
+            UploadFile? attachment,
+            bool removeAttachment,
+            int? leaveId)?
         createLeave,
     required TResult orElse(),
   }) {
@@ -148,8 +154,14 @@ extension CreateLeaveEventPatterns on CreateLeaveEvent {
       case _Started() when started != null:
         return started();
       case _CreateLeave() when createLeave != null:
-        return createLeave(_that.leaveTypeId, _that.startDate, _that.endDate,
-            _that.reason, _that.attachment);
+        return createLeave(
+            _that.leaveTypeId,
+            _that.startDate,
+            _that.endDate,
+            _that.reason,
+            _that.attachment,
+            _that.removeAttachment,
+            _that.leaveId);
       case _:
         return orElse();
     }
@@ -171,8 +183,14 @@ extension CreateLeaveEventPatterns on CreateLeaveEvent {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() started,
-    required TResult Function(int leaveTypeId, String startDate, String endDate,
-            String reason, File? attachment)
+    required TResult Function(
+            int leaveTypeId,
+            String startDate,
+            String endDate,
+            String reason,
+            UploadFile? attachment,
+            bool removeAttachment,
+            int? leaveId)
         createLeave,
   }) {
     final _that = this;
@@ -180,8 +198,14 @@ extension CreateLeaveEventPatterns on CreateLeaveEvent {
       case _Started():
         return started();
       case _CreateLeave():
-        return createLeave(_that.leaveTypeId, _that.startDate, _that.endDate,
-            _that.reason, _that.attachment);
+        return createLeave(
+            _that.leaveTypeId,
+            _that.startDate,
+            _that.endDate,
+            _that.reason,
+            _that.attachment,
+            _that.removeAttachment,
+            _that.leaveId);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -202,8 +226,14 @@ extension CreateLeaveEventPatterns on CreateLeaveEvent {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? started,
-    TResult? Function(int leaveTypeId, String startDate, String endDate,
-            String reason, File? attachment)?
+    TResult? Function(
+            int leaveTypeId,
+            String startDate,
+            String endDate,
+            String reason,
+            UploadFile? attachment,
+            bool removeAttachment,
+            int? leaveId)?
         createLeave,
   }) {
     final _that = this;
@@ -211,8 +241,14 @@ extension CreateLeaveEventPatterns on CreateLeaveEvent {
       case _Started() when started != null:
         return started();
       case _CreateLeave() when createLeave != null:
-        return createLeave(_that.leaveTypeId, _that.startDate, _that.endDate,
-            _that.reason, _that.attachment);
+        return createLeave(
+            _that.leaveTypeId,
+            _that.startDate,
+            _that.endDate,
+            _that.reason,
+            _that.attachment,
+            _that.removeAttachment,
+            _that.leaveId);
       case _:
         return null;
     }
@@ -247,13 +283,18 @@ class _CreateLeave implements CreateLeaveEvent {
       required this.startDate,
       required this.endDate,
       required this.reason,
-      this.attachment});
+      this.attachment,
+      this.removeAttachment = false,
+      this.leaveId});
 
   final int leaveTypeId;
   final String startDate;
   final String endDate;
   final String reason;
-  final File? attachment;
+  final UploadFile? attachment;
+  @JsonKey()
+  final bool removeAttachment;
+  final int? leaveId;
 
   /// Create a copy of CreateLeaveEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -274,16 +315,19 @@ class _CreateLeave implements CreateLeaveEvent {
             (identical(other.endDate, endDate) || other.endDate == endDate) &&
             (identical(other.reason, reason) || other.reason == reason) &&
             (identical(other.attachment, attachment) ||
-                other.attachment == attachment));
+                other.attachment == attachment) &&
+            (identical(other.removeAttachment, removeAttachment) ||
+                other.removeAttachment == removeAttachment) &&
+            (identical(other.leaveId, leaveId) || other.leaveId == leaveId));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, leaveTypeId, startDate, endDate, reason, attachment);
+  int get hashCode => Object.hash(runtimeType, leaveTypeId, startDate, endDate,
+      reason, attachment, removeAttachment, leaveId);
 
   @override
   String toString() {
-    return 'CreateLeaveEvent.createLeave(leaveTypeId: $leaveTypeId, startDate: $startDate, endDate: $endDate, reason: $reason, attachment: $attachment)';
+    return 'CreateLeaveEvent.createLeave(leaveTypeId: $leaveTypeId, startDate: $startDate, endDate: $endDate, reason: $reason, attachment: $attachment, removeAttachment: $removeAttachment, leaveId: $leaveId)';
   }
 }
 
@@ -299,7 +343,9 @@ abstract mixin class _$CreateLeaveCopyWith<$Res>
       String startDate,
       String endDate,
       String reason,
-      File? attachment});
+      UploadFile? attachment,
+      bool removeAttachment,
+      int? leaveId});
 }
 
 /// @nodoc
@@ -318,6 +364,8 @@ class __$CreateLeaveCopyWithImpl<$Res> implements _$CreateLeaveCopyWith<$Res> {
     Object? endDate = null,
     Object? reason = null,
     Object? attachment = freezed,
+    Object? removeAttachment = null,
+    Object? leaveId = freezed,
   }) {
     return _then(_CreateLeave(
       leaveTypeId: null == leaveTypeId
@@ -339,7 +387,15 @@ class __$CreateLeaveCopyWithImpl<$Res> implements _$CreateLeaveCopyWith<$Res> {
       attachment: freezed == attachment
           ? _self.attachment
           : attachment // ignore: cast_nullable_to_non_nullable
-              as File?,
+              as UploadFile?,
+      removeAttachment: null == removeAttachment
+          ? _self.removeAttachment
+          : removeAttachment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      leaveId: freezed == leaveId
+          ? _self.leaveId
+          : leaveId // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -489,7 +545,7 @@ extension CreateLeaveStatePatterns on CreateLeaveState {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(String response)? success,
+    TResult Function(Leave leave)? success,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) {
@@ -500,7 +556,7 @@ extension CreateLeaveStatePatterns on CreateLeaveState {
       case _Loading() when loading != null:
         return loading();
       case _Success() when success != null:
-        return success(_that.response);
+        return success(_that.leave);
       case _Error() when error != null:
         return error(_that.message);
       case _:
@@ -525,7 +581,7 @@ extension CreateLeaveStatePatterns on CreateLeaveState {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(String response) success,
+    required TResult Function(Leave leave) success,
     required TResult Function(String message) error,
   }) {
     final _that = this;
@@ -535,7 +591,7 @@ extension CreateLeaveStatePatterns on CreateLeaveState {
       case _Loading():
         return loading();
       case _Success():
-        return success(_that.response);
+        return success(_that.leave);
       case _Error():
         return error(_that.message);
       case _:
@@ -559,7 +615,7 @@ extension CreateLeaveStatePatterns on CreateLeaveState {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(String response)? success,
+    TResult? Function(Leave leave)? success,
     TResult? Function(String message)? error,
   }) {
     final _that = this;
@@ -569,7 +625,7 @@ extension CreateLeaveStatePatterns on CreateLeaveState {
       case _Loading() when loading != null:
         return loading();
       case _Success() when success != null:
-        return success(_that.response);
+        return success(_that.leave);
       case _Error() when error != null:
         return error(_that.message);
       case _:
@@ -621,9 +677,9 @@ class _Loading implements CreateLeaveState {
 /// @nodoc
 
 class _Success implements CreateLeaveState {
-  const _Success(this.response);
+  const _Success(this.leave);
 
-  final String response;
+  final Leave leave;
 
   /// Create a copy of CreateLeaveState
   /// with the given fields replaced by the non-null parameter values.
@@ -637,16 +693,15 @@ class _Success implements CreateLeaveState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _Success &&
-            (identical(other.response, response) ||
-                other.response == response));
+            (identical(other.leave, leave) || other.leave == leave));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, response);
+  int get hashCode => Object.hash(runtimeType, leave);
 
   @override
   String toString() {
-    return 'CreateLeaveState.success(response: $response)';
+    return 'CreateLeaveState.success(leave: $leave)';
   }
 }
 
@@ -656,7 +711,7 @@ abstract mixin class _$SuccessCopyWith<$Res>
   factory _$SuccessCopyWith(_Success value, $Res Function(_Success) _then) =
       __$SuccessCopyWithImpl;
   @useResult
-  $Res call({String response});
+  $Res call({Leave leave});
 }
 
 /// @nodoc
@@ -670,13 +725,13 @@ class __$SuccessCopyWithImpl<$Res> implements _$SuccessCopyWith<$Res> {
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   $Res call({
-    Object? response = null,
+    Object? leave = null,
   }) {
     return _then(_Success(
-      null == response
-          ? _self.response
-          : response // ignore: cast_nullable_to_non_nullable
-              as String,
+      null == leave
+          ? _self.leave
+          : leave // ignore: cast_nullable_to_non_nullable
+              as Leave,
     ));
   }
 }

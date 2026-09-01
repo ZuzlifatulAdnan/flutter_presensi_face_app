@@ -53,6 +53,7 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Started value)? started,
     TResult Function(_Checkin value)? checkin,
+    TResult Function(_Submit value)? submit,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -61,6 +62,8 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
         return started(_that);
       case _Checkin() when checkin != null:
         return checkin(_that);
+      case _Submit() when submit != null:
+        return submit(_that);
       case _:
         return orElse();
     }
@@ -83,6 +86,7 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
   TResult map<TResult extends Object?>({
     required TResult Function(_Started value) started,
     required TResult Function(_Checkin value) checkin,
+    required TResult Function(_Submit value) submit,
   }) {
     final _that = this;
     switch (_that) {
@@ -90,6 +94,8 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
         return started(_that);
       case _Checkin():
         return checkin(_that);
+      case _Submit():
+        return submit(_that);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -111,6 +117,7 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Started value)? started,
     TResult? Function(_Checkin value)? checkin,
+    TResult? Function(_Submit value)? submit,
   }) {
     final _that = this;
     switch (_that) {
@@ -118,6 +125,8 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
         return started(_that);
       case _Checkin() when checkin != null:
         return checkin(_that);
+      case _Submit() when submit != null:
+        return submit(_that);
       case _:
         return null;
     }
@@ -139,6 +148,7 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? started,
     TResult Function(String latitute, String longitude)? checkin,
+    TResult Function(CheckInOutRequestModel request)? submit,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -147,6 +157,8 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
         return started();
       case _Checkin() when checkin != null:
         return checkin(_that.latitute, _that.longitude);
+      case _Submit() when submit != null:
+        return submit(_that.request);
       case _:
         return orElse();
     }
@@ -169,6 +181,7 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
   TResult when<TResult extends Object?>({
     required TResult Function() started,
     required TResult Function(String latitute, String longitude) checkin,
+    required TResult Function(CheckInOutRequestModel request) submit,
   }) {
     final _that = this;
     switch (_that) {
@@ -176,6 +189,8 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
         return started();
       case _Checkin():
         return checkin(_that.latitute, _that.longitude);
+      case _Submit():
+        return submit(_that.request);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -197,6 +212,7 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? started,
     TResult? Function(String latitute, String longitude)? checkin,
+    TResult? Function(CheckInOutRequestModel request)? submit,
   }) {
     final _that = this;
     switch (_that) {
@@ -204,6 +220,8 @@ extension CheckinAttendanceEventPatterns on CheckinAttendanceEvent {
         return started();
       case _Checkin() when checkin != null:
         return checkin(_that.latitute, _that.longitude);
+      case _Submit() when submit != null:
+        return submit(_that.request);
       case _:
         return null;
     }
@@ -297,6 +315,68 @@ class __$CheckinCopyWithImpl<$Res> implements _$CheckinCopyWith<$Res> {
           ? _self.longitude
           : longitude // ignore: cast_nullable_to_non_nullable
               as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _Submit implements CheckinAttendanceEvent {
+  const _Submit(this.request);
+
+  final CheckInOutRequestModel request;
+
+  /// Create a copy of CheckinAttendanceEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$SubmitCopyWith<_Submit> get copyWith =>
+      __$SubmitCopyWithImpl<_Submit>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _Submit &&
+            (identical(other.request, request) || other.request == request));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, request);
+
+  @override
+  String toString() {
+    return 'CheckinAttendanceEvent.submit(request: $request)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$SubmitCopyWith<$Res>
+    implements $CheckinAttendanceEventCopyWith<$Res> {
+  factory _$SubmitCopyWith(_Submit value, $Res Function(_Submit) _then) =
+      __$SubmitCopyWithImpl;
+  @useResult
+  $Res call({CheckInOutRequestModel request});
+}
+
+/// @nodoc
+class __$SubmitCopyWithImpl<$Res> implements _$SubmitCopyWith<$Res> {
+  __$SubmitCopyWithImpl(this._self, this._then);
+
+  final _Submit _self;
+  final $Res Function(_Submit) _then;
+
+  /// Create a copy of CheckinAttendanceEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? request = null,
+  }) {
+    return _then(_Submit(
+      null == request
+          ? _self.request
+          : request // ignore: cast_nullable_to_non_nullable
+              as CheckInOutRequestModel,
     ));
   }
 }

@@ -197,7 +197,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -344,35 +344,26 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       await AuthLocalDatasource()
                                           .saveAuthData(data);
                                       // Jadwalkan notifikasi pengingat absen
-                                      // sesuai shift kerja (15 menit sebelum)
+                                      // masuk (15 menit sebelum start) dan
+                                      // pulang (tepat di end_time).
                                       final shiftStart =
                                           data.user?.shiftKerja?.startTime ??
                                               data.defaultShiftDetail
                                                   ?.startTime;
+                                      final shiftEnd =
+                                          data.user?.shiftKerja?.endTime ??
+                                              data.defaultShiftDetail
+                                                  ?.endTime;
                                       if (shiftStart != null &&
                                           shiftStart.isNotEmpty) {
                                         final shiftName =
                                             data.defaultShift?.name ??
                                                 data.user?.shiftKerja?.name ??
                                                 'Shift Kerja';
-                                        // Parse format "HH:mm" dari startTime
-                                        String parsedTime = shiftStart;
-                                        final dtParsed =
-                                            DateTime.tryParse(shiftStart);
-                                        if (dtParsed != null) {
-                                          parsedTime =
-                                              '${dtParsed.hour.toString().padLeft(2, '0')}:${dtParsed.minute.toString().padLeft(2, '0')}';
-                                        } else {
-                                          final m = RegExp(r'(\d{1,2}):(\d{2})')
-                                              .firstMatch(shiftStart);
-                                          if (m != null) {
-                                            parsedTime =
-                                                '${m.group(1)!.padLeft(2, '0')}:${m.group(2)!}';
-                                          }
-                                        }
                                         await AttendanceNotificationService()
                                             .scheduleShiftReminder(
-                                          shiftStartTime: parsedTime,
+                                          shiftStartTime: shiftStart,
+                                          shiftEndTime: shiftEnd,
                                           shiftName: shiftName,
                                         );
                                       }
@@ -433,7 +424,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                             boxShadow: [
                                               BoxShadow(
                                                 color: const Color(0xFF1e3c72)
-                                                    .withOpacity(0.3),
+                                                    .withValues(alpha: 0.3),
                                                 blurRadius: 12,
                                                 offset: const Offset(0, 4),
                                               ),
@@ -542,7 +533,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                       textAlign: TextAlign.center,
                     ),

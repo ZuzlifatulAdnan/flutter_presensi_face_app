@@ -1,11 +1,11 @@
 {
-    "name": "flutter_absensi_app",
-    "short_name": "flutter_absensi_app",
+    "name": "Absen DevTech — Presensi Karyawan",
+    "short_name": "Absen DevTech",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#f6f7fb",
+    "theme_color": "#2563eb",
+    "description": "Aplikasi presensi karyawan: absen WFO/WFH/WFA, izin & cuti, lembur, dan riwayat kehadiran.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
@@ -31,5 +31,6 @@
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "lang": "id"
 }

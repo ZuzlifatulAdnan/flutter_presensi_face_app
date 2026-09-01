@@ -229,7 +229,7 @@ class _ProfilePageState extends State<ProfilePage>
                   'Kelola informasi akun Anda',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -249,10 +249,10 @@ class _ProfilePageState extends State<ProfilePage>
             builder: (context, state) {
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
+                  color: Colors.red.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.red.withOpacity(0.3),
+                    color: Colors.red.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -283,7 +283,7 @@ class _ProfilePageState extends State<ProfilePage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -315,7 +315,7 @@ class _ProfilePageState extends State<ProfilePage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -326,7 +326,7 @@ class _ProfilePageState extends State<ProfilePage>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1e3c72).withOpacity(0.1),
+              color: const Color(0xFF1e3c72).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(50),
             ),
             child: const Icon(
@@ -380,7 +380,7 @@ class _ProfilePageState extends State<ProfilePage>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -462,7 +462,7 @@ class _ProfilePageState extends State<ProfilePage>
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -553,7 +553,7 @@ class _ProfilePageState extends State<ProfilePage>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF1e3c72).withOpacity(0.3),
+                            color: const Color(0xFF1e3c72).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -567,7 +567,7 @@ class _ProfilePageState extends State<ProfilePage>
                             final result =
                                 await context.push(UpdateProfilePage(user: user));
                             if (result == true) {
-                              if (mounted) {
+                              if (mounted && context.mounted) {
                                 context
                                     .read<GetUserBloc>()
                                     .add(const GetUserEvent.getUser());
@@ -674,7 +674,7 @@ class _ProfilePageState extends State<ProfilePage>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1e3c72).withOpacity(0.1),
+              color: const Color(0xFF1e3c72).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -732,7 +732,7 @@ class _ProfilePageState extends State<ProfilePage>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(50),
                 ),
                 child: const Icon(
@@ -826,6 +826,25 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   ),
                 ],
+              ),
+              const SpaceHeight(12),
+              // `POST /api/logout-all` mencabut token di semua perangkat —
+              // berguna saat ponsel lama hilang atau dipakai orang lain.
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<LogoutBloc>().add(
+                        const LogoutEvent.logoutAll(),
+                      );
+                },
+                icon: const Icon(Icons.devices_other_rounded, size: 18),
+                label: Text(
+                  'Keluar dari semua perangkat',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),

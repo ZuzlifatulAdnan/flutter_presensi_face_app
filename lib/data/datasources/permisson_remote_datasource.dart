@@ -23,7 +23,7 @@ class PermissonRemoteDatasource {
 
     http.StreamedResponse response = await request.send();
 
-    final String body = await response.stream.bytesToString();
+    await response.stream.drain<void>();
 
     if (response.statusCode == 201) {
       return const Right('Permission added successfully');

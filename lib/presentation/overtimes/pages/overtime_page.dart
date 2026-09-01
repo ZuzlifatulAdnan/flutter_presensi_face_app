@@ -21,6 +21,7 @@ class _OvertimePageState extends State<OvertimePage> {
   void initState() {
     super.initState();
     Future.microtask(() {
+      if (!mounted) return;
       context
           .read<GetOvertimesBloc>()
           .add(const GetOvertimesEvent.getOvertimes());
@@ -125,9 +126,9 @@ class _OvertimePageState extends State<OvertimePage> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: IconButton(
               icon: const Icon(
@@ -155,7 +156,7 @@ class _OvertimePageState extends State<OvertimePage> {
                   'Kelola catatan lembur Anda',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -175,7 +176,7 @@ class _OvertimePageState extends State<OvertimePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -249,10 +250,10 @@ class _OvertimePageState extends State<OvertimePage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _getStatusColor(status).withOpacity(0.12),
+                color: _getStatusColor(status).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _getStatusColor(status).withOpacity(0.3),
+                  color: _getStatusColor(status).withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -275,7 +276,7 @@ class _OvertimePageState extends State<OvertimePage> {
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      canCheckIn ? AppColors.green : AppColors.grey.withOpacity(0.3),
+                      canCheckIn ? AppColors.green : AppColors.grey.withValues(alpha: 0.3),
                   foregroundColor: canCheckIn ? Colors.white : AppColors.grey,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -310,7 +311,7 @@ class _OvertimePageState extends State<OvertimePage> {
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      canCheckOut ? AppColors.red : AppColors.grey.withOpacity(0.3),
+                      canCheckOut ? AppColors.red : AppColors.grey.withValues(alpha: 0.3),
                   foregroundColor: canCheckOut ? Colors.white : AppColors.grey,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -351,7 +352,7 @@ class _OvertimePageState extends State<OvertimePage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -457,7 +458,7 @@ class _OvertimePageState extends State<OvertimePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -477,7 +478,7 @@ class _OvertimePageState extends State<OvertimePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -521,7 +522,7 @@ class _OvertimePageState extends State<OvertimePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -565,7 +566,7 @@ class _OvertimePageState extends State<OvertimePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -626,7 +627,7 @@ class _OvertimePageState extends State<OvertimePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -642,7 +643,7 @@ class _OvertimePageState extends State<OvertimePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [statusColor, statusColor.withOpacity(0.7)],
+                    colors: [statusColor, statusColor.withValues(alpha: 0.7)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -674,9 +675,9 @@ class _OvertimePageState extends State<OvertimePage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.12),
+                        color: statusColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         statusLabel,
@@ -742,7 +743,7 @@ class _OvertimePageState extends State<OvertimePage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -757,7 +758,7 @@ class _OvertimePageState extends State<OvertimePage> {
                   label,
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                   ),
                 ),
                 Text(
@@ -780,7 +781,7 @@ class _OvertimePageState extends State<OvertimePage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.light.withOpacity(0.3),
+        color: AppColors.light.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

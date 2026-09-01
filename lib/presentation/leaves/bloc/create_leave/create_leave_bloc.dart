@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'package:flutter_absensi_app/core/network/api_client.dart';
 import 'package:flutter_absensi_app/data/datasources/leave_remote_datasource.dart';
 import 'package:flutter_absensi_app/data/models/request/create_leave_request_model.dart';
 import 'package:flutter_absensi_app/data/models/response/leave_response_model.dart';
@@ -24,8 +23,11 @@ class CreateLeaveBloc extends Bloc<CreateLeaveEvent, CreateLeaveState> {
         endDate: event.endDate,
         reason: event.reason,
         attachment: event.attachment,
+        removeAttachment: event.removeAttachment,
       );
-      final result = await datasource.createLeave(request);
+      final result = event.leaveId == null
+          ? await datasource.createLeave(request)
+          : await datasource.updateLeave(event.leaveId!, request);
       result.fold(
         (l) => emit(_Error(l)),
         (r) => emit(_Success(r)),

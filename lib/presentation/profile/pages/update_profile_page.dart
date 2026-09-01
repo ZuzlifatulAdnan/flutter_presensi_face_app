@@ -97,7 +97,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
     phoneController = TextEditingController(text: widget.user.phone ?? '');
   }
 
-  loadData() async {
+  Future<void> loadData() async {
     authData = await AuthLocalDatasource().getAuthData();
     if (mounted) {
       setState(() {
@@ -201,10 +201,10 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -234,7 +234,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
                   'Perbarui informasi pribadi Anda',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -255,7 +255,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -331,7 +331,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -461,7 +461,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1e3c72).withOpacity(0.1),
+                  color: const Color(0xFF1e3c72).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -489,7 +489,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
           orElse: () {},
           success: (user) async {
             await AuthLocalDatasource().updateUser(user);
-            if (mounted) {
+            if (mounted && context.mounted) {
               context.read<GetUserBloc>().add(const GetUserEvent.getUser());
 
               _showModernSnackBar(
@@ -522,7 +522,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1e3c72).withOpacity(0.3),
+                    color: const Color(0xFF1e3c72).withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),

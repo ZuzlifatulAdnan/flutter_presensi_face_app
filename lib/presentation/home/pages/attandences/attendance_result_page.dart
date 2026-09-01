@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_absensi_app/core/helper/radius_calculate.dart';
 import 'package:flutter_absensi_app/data/datasources/auth_local_datasource.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/checkout_attendance/checkout_attendance_bloc.dart';
@@ -9,13 +8,13 @@ import 'package:flutter_absensi_app/presentation/home/pages/attandences/scanner_
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:location/location.dart';
+import 'package:flutter_absensi_app/core/helper/location_helper.dart';
 
 import 'package:flutter_absensi_app/core/core.dart';
 import 'package:flutter_absensi_app/presentation/home/bloc/checkin_attendance/checkin_attendance_bloc.dart';
 import 'package:flutter_absensi_app/presentation/home/pages/attendance_success_page.dart';
 
-import 'face_detector_checkin_page.dart';
+import 'attendance_page.dart';
 
 class AttendanceResultPage extends StatefulWidget {
   final bool isCheckin;
@@ -108,69 +107,32 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
   }
 
   Future<void> getCurrentPosition() async {
+    setState(() {
+      isLoadingLocation = true;
+      locationError = null;
+    });
+
     try {
+      final position = await LocationHelper.current();
+      if (!mounted) return;
       setState(() {
-        isLoadingLocation = true;
-        locationError = null;
-      });
-
-      Location location = Location();
-
-      bool serviceEnabled;
-      PermissionStatus permissionGranted;
-      LocationData locationData;
-
-      serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          setState(() {
-            isLoadingLocation = false;
-            locationError = 'Layanan lokasi tidak aktif';
-          });
-          return;
-        }
-      }
-
-      permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) {
-          setState(() {
-            isLoadingLocation = false;
-            locationError = 'Izin lokasi ditolak';
-          });
-          return;
-        }
-      }
-
-      locationData = await location.getLocation();
-      latitude = locationData.latitude;
-      longitude = locationData.longitude;
-
-      setState(() {
+        latitude = position.latitude;
+        longitude = position.longitude;
         isLoadingLocation = false;
       });
-
-      // Validate radius after getting location
       _validateRadius();
-    } on PlatformException catch (e) {
+    } on LocationFailure catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoadingLocation = false;
-        locationError = e.message ?? 'Gagal mendapatkan lokasi';
+        locationError = e.message;
       });
-      if (e.code == 'IO_ERROR') {
-        debugPrint(
-            'A network error occurred trying to lookup the supplied coordinates: ${e.message}');
-      } else {
-        debugPrint('Failed to lookup coordinates: ${e.message}');
-      }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoadingLocation = false;
-        locationError = 'Terjadi kesalahan yang tidak diketahui';
+        locationError = 'Gagal mendapatkan lokasi. Coba lagi.';
       });
-      debugPrint('An unknown error occurred: $e');
     }
   }
 
@@ -1248,15 +1210,11 @@ class _RecognitionResultPageState extends State<AttendanceResultPage>
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: () {
+          // Alur wajah kini menyatu di halaman presensi, yang juga
+          // menentukan wajib-tidaknya foto lewat `pre-check`.
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (context) => FaceDetectorCheckinPage(
-                isCheckedIn: widget.isCheckin,
-                latitude: latitude,
-                longitude: longitude,
-              ),
-            ),
+            MaterialPageRoute(builder: (_) => const AttendancePage()),
           );
         },
         style: OutlinedButton.styleFrom(

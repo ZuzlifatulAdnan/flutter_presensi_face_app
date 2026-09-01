@@ -1,379 +1,298 @@
-# 🏢 HRM Attendance App
-
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-blue.svg)](https://flutter.dev/)
-[![Dart](https://img.shields.io/badge/Dart-3.x-blue.svg)](https://dart.dev/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-A modern and comprehensive Human Resource Management (HRM) attendance application built with Flutter. This app provides advanced face detection, location-based attendance, and real-time attendance tracking with a beautiful, professional UI.
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Flutter SDK** >= 3.0.0
-- **Dart SDK** >= 3.0.0
-- **Android Studio** / **VS Code** with Flutter plugins
-- **iOS development** (for iOS deployment)
-- **Device/Emulator** with camera support
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   extract zip
-   cd flutter_absensi_app
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   flutter pub get
-   ```
-
-3. **Configure Firebase** (if using Firebase)
-
-   ```bash
-   # Add your google-services.json (Android)
-   # Add your GoogleService-Info.plist (iOS)
-   ```
-
-4. **Set up ML Models**
-
-   ```bash
-   # Ensure ML Kit models are properly configured
-   # Face detection models will be downloaded automatically
-   ```
-
-5. **Configure permissions**
-
-   **Android** (`android/app/src/main/AndroidManifest.xml`):
-
-   ```xml
-   <uses-permission android:name="android.permission.CAMERA" />
-   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-   <uses-permission android:name="android.permission.INTERNET" />
-   ```
-
-   **iOS** (`ios/Runner/Info.plist`):
-
-   ```xml
-   <key>NSCameraUsageDescription</key>
-   <string>This app needs camera access for face recognition attendance</string>
-   <key>NSLocationWhenInUseUsageDescription</key>
-   <string>This app needs location access for location-based attendance</string>
-   ```
-
-6. **Run the application**
-
-   ```bash
-   # Debug mode
-   flutter run
-
-   # Release mode
-   flutter run --release
-   ```
-
-### Build for Production
-
-**Android APK:**
-
-```bash
-flutter build apk --release
-```
-
-**Android App Bundle:**
-
-```bash
-flutter build appbundle --release
-```
-
-**iOS:**
-
-```bash
-flutter build ios --release
-```
-
-## 📱 Screenshots
-
-|           Splash Screen           |              Login              |        Home Dashboard         |
-| :-------------------------------: | :-----------------------------: | :---------------------------: |
-| ![Splash](screenshots/splash.png) | ![Login](screenshots/login.png) | ![Home](screenshots/home.png) |
-
-|                  Face Detection                   |                Attendance                 |               Profile               |
-| :-----------------------------------------------: | :---------------------------------------: | :---------------------------------: |
-| ![Face Detection](screenshots/face_detection.png) | ![Attendance](screenshots/attendance.png) | ![Profile](screenshots/profile.png) |
-
-## ✨ Features
-
-### 🔐 Authentication & Security
-
-- **Modern Login Interface** - Clean, gradient-based login with professional design
-- **Secure Authentication** - Token-based authentication with auto-refresh
-- **Biometric Face Detection** - ML Kit powered face recognition with liveness detection
-- **Head Turn Verification** - Anti-spoofing security requiring head movement
-
-### 📍 Attendance Management
-
-- **Multiple Attendance Methods**:
-  - 🤖 **Face Recognition** - Advanced AI-powered facial recognition
-  - 📱 **QR Code Scanning** - Quick attendance via QR codes
-  - 📍 **Location-based** - GPS verification for remote attendance
-- **Real-time Tracking** - Live attendance monitoring
-- **Check-in/Check-out** - Complete attendance cycle management
-- **Attendance History** - Comprehensive attendance records
-
-### 🏠 Modern Dashboard
-
-- **Professional UI** - Clean, modern interface with gradient themes
-- **Quick Actions** - Fast access to common functions
-- **Real-time Updates** - Live data synchronization
-- **Beautiful Animations** - Smooth, professional transitions
-
-### 📋 Leave Management
-
-- **Leave Requests** - Submit leave applications with attachments
-- **Photo Attachments** - Support for image uploads
-- **Status Tracking** - Real-time leave request status
-- **Leave History** - Complete leave records
-
-### 👤 Profile Management
-
-- **User Profile** - Complete user information management
-- **Settings** - Customizable app preferences
-- **Notifications** - Push notification support
-
-## 🛠️ Technology Stack
-
-### Frontend
-
-- **Flutter** 3.x - Cross-platform mobile framework
-- **Dart** 3.x - Programming language
-- **BLoC Pattern** - State management architecture
-- **Google Fonts** - Typography system
-
-### UI/UX
-
-- **Material Design 3** - Modern material design principles
-- **Gradient Themes** - Professional color schemes
-- **Glassmorphism** - Modern UI effects
-- **Responsive Design** - Adaptive layouts for all screen sizes
-
-### Camera & ML
-
-- **Camera Plugin** - Real-time camera integration
-- **Google ML Kit** - Face detection and recognition
-- **Face Detection API** - Advanced facial analysis
-- **Image Processing** - Real-time image manipulation
-
-### Location & Maps
-
-- **Geolocator** - GPS and location services
-- **Location Permissions** - Secure location access
-- **Geofencing** - Location-based attendance validation
-
-### Storage & Data
-
-- **Local Storage** - Secure local data persistence
-- **Image Picker** - Photo capture and selection
-- **File Management** - Document and image handling
-
-### Network & API
-
-- **HTTP Client** - RESTful API communication
-- **JSON Serialization** - Data parsing and formatting
-- **Error Handling** - Comprehensive error management
-
-## 🏗️ Architecture
-
-The app follows **Clean Architecture** principles with **BLoC Pattern** for state management:
-
-```
-lib/
-├── core/                    # Core functionality
-│   ├── assets/             # Asset management
-│   ├── components/         # Reusable UI components
-│   ├── constants/          # App constants
-│   ├── extensions/         # Dart extensions
-│   ├── helper/            # Helper functions
-│   └── ml/                # Machine learning utilities
-├── data/                   # Data layer
-│   ├── datasources/       # Data sources (API, local)
-│   └── models/            # Data models
-└── presentation/           # Presentation layer
-    ├── auth/              # Authentication screens
-    ├── home/              # Home & dashboard screens
-    └── profile/           # Profile management screens
-```
-
-## 📱 App Flow
-
-### Authentication Flow
-
-1. **Splash Screen** → Auto-check authentication status
-2. **Login Screen** → Email/password authentication
-3. **Dashboard** → Main application interface
-
-### Attendance Flow
-
-1. **Choose Method** → Face Recognition / QR Code / Location
-2. **Face Detection** →
-   - Position face in center
-   - Turn head to the right (liveness detection)
-   - Capture when ready
-3. **Verification** → Process attendance with timestamp
-4. **Confirmation** → Success/failure feedback
-
-### Leave Request Flow
-
-1. **Permission Page** → Fill leave request form
-2. **Date Selection** → Choose leave dates
-3. **Reason Input** → Provide leave reason
-4. **Attachment** → Optional photo upload
-5. **Submit** → Send request for approval
-
-## 🎨 UI/UX Design Principles
-
-### Design System
-
-- **Professional Blue Gradient** - Primary color scheme
-- **Glassmorphism Effects** - Modern semi-transparent elements
-- **Consistent Spacing** - 8dp grid system
-- **Typography** - Poppins font family throughout
-- **Accessibility** - WCAG 2.1 AA compliance
-
-### Components
-
-- **Custom Buttons** - Gradient buttons with shadows
-- **Form Fields** - Modern input fields with validation
-- **Cards** - Elevated cards with rounded corners
-- **Navigation** - Floating bottom navigation with glassmorphism
-- **Overlays** - Professional camera overlays and guides
-
-## 🔧 Configuration
-
-### Environment Setup
-
-Create `.env` file in project root:
-
-```env
-API_BASE_URL=https://your-api-domain.com/api
-API_KEY=your_api_key_here
-FIREBASE_PROJECT_ID=your_firebase_project
-```
-
-### App Configuration
-
-Update `lib/core/constants/variables.dart`:
-
-```dart
-class AppConfig {
-  static const String appName = 'HRM Attendance';
-  static const String apiBaseUrl = 'YOUR_API_URL';
-  static const double attendanceRadius = 100.0; // meters
-  static const int faceDetectionTimeout = 30; // seconds
-}
-```
-
-## 📋 Testing
-
-### Run Tests
-
-```bash
-# Unit tests
-flutter test
-
-# Integration tests
-flutter test integration_test/
-
-# Widget tests
-flutter test test/widget_test.dart
-```
-
-### Test Coverage
-
-```bash
-# Generate coverage report
-flutter test --coverage
-genhtml coverage/lcov.info -o coverage/html
-```
-
-## 🚀 Deployment
-
-### Android Deployment
-
-1. **Generate Keystore**
-
-   ```bash
-   keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-   ```
-
-2. **Configure Signing** - Update `android/key.properties`
-
-3. **Build Release**
-   ```bash
-   flutter build appbundle --release
-   ```
-
-### iOS Deployment
-
-1. **Configure Xcode** - Set up signing certificates
-2. **Build Archive** - Create iOS archive
-3. **Upload to App Store** - Use Xcode or Application Loader
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Code Style
-
-- Follow [Dart Style Guide](https://dart.dev/guides/language/effective-dart/style)
-- Use `flutter analyze` to check code quality
-- Format code with `dart format`
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Team
-
-- **Developer**: [Adnan](https://github.com/ZuzlifatulAdnan)
-
-## 📞 Support
-
-For support and questions:
-
-- 📧 Email: your-email@domain.com
-- 💬 Telegram: @yourusername
-
-## 🔄 Changelog
-
-### Version 2.0.0 (Latest)
-
-- ✨ Modern UI redesign with gradient themes
-- 🤖 Advanced face detection with liveness verification
-- 📱 Glassmorphism bottom navigation
-- 🎨 Professional camera overlay with head turn detection
-- 📋 Enhanced leave management system
-- 🔧 Improved state management with BLoC pattern
-
-### Version 1.0.0
-
-- 🎯 Initial release
-- 👤 Basic authentication
-- 📍 Location-based attendance
-- 📱 QR code scanning
-- 👤 User profile management
+# 🏢 Aplikasi Presensi Karyawan
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-blue.svg)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.5%2B-blue.svg)](https://dart.dev/)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey.svg)](#-dukungan-platform)
+
+Aplikasi presensi karyawan berbasis Flutter: presensi **WFO/WFH/WFA** dengan
+validasi lokasi di peta, verifikasi wajah di perangkat, pengajuan izin & cuti
+berlampiran, lembur, dan riwayat kehadiran.
+
+Identitas aplikasi (nama, logo, warna), aturan presensi, konfigurasi peta,
+versi minimum, dan mode pemeliharaan **diambil dari API** lewat
+`GET /api/app-settings` — admin bisa mengubahnya dari panel tanpa rilis baru.
 
 ---
 
-**Built with ❤️ using Flutter**
+## 📚 Dokumentasi Terkait
+
+| Dokumen | Isi |
+| --- | --- |
+| [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) | Referensi endpoint lengkap |
+| [`api-fitur-baru.md`](api-fitur-baru.md) | Endpoint baru: WFH/WFA, peta pra-presensi, lampiran izin, ubah password, pengaturan aplikasi |
+| [`docs/RELEASE.md`](docs/RELEASE.md) | Panduan rilis Play Store, App Store, dan web |
+
+---
+
+## ✨ Fitur
+
+### 🔐 Autentikasi & Sesi
+
+- Login dengan rate limit sisi server (5 percobaan/menit per email+IP).
+- Token disimpan lokal; saat server menjawab **401**, sesi otomatis dibersihkan
+  dan pengguna diarahkan kembali ke halaman masuk.
+- **Keluar dari semua perangkat** (`POST /api/logout-all`).
+- Ubah password dengan aturan yang sama persis dengan validasi server:
+  minimal 8 karakter, mengandung huruf dan angka, dan berbeda dari password
+  lama. Perangkat lain otomatis dikeluarkan.
+
+### 📍 Presensi WFO / WFH / WFA
+
+Seluruh alur presensi ditentukan satu request `GET /api/attendance/pre-check`,
+jadi aplikasi tidak menebak aturan sendiri dan server tetap memvalidasi ulang:
+
+- **Peta pra-presensi** — posisi pengguna, pin kantor, dan lingkaran radius
+  (hijau bila di dalam radius, merah bila di luar) memakai tile yang
+  dikonfigurasi admin.
+- **Pilihan mode kerja** hanya menampilkan mode yang diizinkan untuk akun ini.
+  Saat absen pulang, mode terkunci mengikuti data absen masuk.
+- **Foto bukti** dan **catatan aktivitas** muncul dan diwajibkan sesuai aturan
+  dari server (`photo_required`, `remote_photo_required`, `remote_notes_required`).
+- **Deteksi fake GPS**, akurasi GPS, alamat hasil reverse geocoding, dan info
+  perangkat ikut terkirim bersama presensi.
+- **Jam memakai `server_time`**, bukan jam perangkat, sehingga tidak bisa
+  dikelabui dengan mengubah waktu ponsel.
+- Alasan tombol nonaktif (`blockers[]`) ditampilkan apa adanya — mis. sedang
+  cuti yang disetujui, akhir pekan, atau belum ada lokasi kantor aktif.
+
+### 🙂 Verifikasi Wajah
+
+- Deteksi wajah **ML Kit** + pengenalan **MobileFaceNet (TensorFlow Lite)**
+  yang berjalan sepenuhnya di perangkat.
+- **Uji kedipan mata** sebagai pemeriksaan keaslian sederhana, supaya foto
+  statis tidak bisa dipakai untuk presensi.
+- Pendaftaran wajah sekali di halaman profil, lalu dipakai untuk pencocokan.
+- Di platform tanpa ML Kit/TFLite (web & desktop), alur otomatis turun ke
+  **foto selfie biasa** yang tetap terkirim sebagai bukti dan diverifikasi
+  server — lihat [Dukungan Platform](#-dukungan-platform).
+
+### 📋 Izin & Cuti
+
+- Pengajuan dengan lampiran **JPG, PNG, WEBP, atau PDF (maks 5 MB)**,
+  divalidasi lebih dulu di aplikasi agar tidak menunggu respons 422.
+- Ubah pengajuan yang masih `pending`, ganti atau hapus lampiran.
+- **Batalkan pengajuan** langsung dari daftar.
+- Sisa kuota per jenis izin; `total_days` dihitung server (mengecualikan akhir
+  pekan dan hari libur).
+
+### 📊 Riwayat & Rekap
+
+- **Rekap bulanan**: total hadir, tepat waktu, terlambat, total jam kerja, dan
+  rincian per mode kerja.
+- Filter riwayat **di sisi server** berdasarkan tanggal, status, dan mode kerja.
+- Detail presensi menampilkan bukti lengkap: foto masuk/pulang, catatan,
+  alamat, jarak dari kantor, durasi kerja, dan penanda fake GPS.
+
+### ⏱️ Lembur & Notifikasi
+
+- Mulai dan selesaikan lembur dengan dokumen pendukung.
+- **Notifikasi pengingat absen** terjadwal otomatis sesuai shift: 15 menit
+  sebelum jam masuk dan tepat pada jam pulang.
+
+### 🎨 Tampilan
+
+- Material 3 dengan warna utama yang mengikuti `theme.primary_color` dari API.
+- Layar **pemeliharaan** dan **wajib perbarui aplikasi** yang muncul sebelum
+  layar apa pun yang membutuhkan API.
+- Pesan error ditampilkan apa adanya dari server — sudah berbahasa Indonesia
+  dan aman untuk pengguna.
+
+---
+
+## 💻 Dukungan Platform
+
+| Platform | Presensi & peta | Verifikasi wajah di perangkat | Catatan |
+| --- | :---: | :---: | --- |
+| **Android** | ✅ | ✅ | Target utama |
+| **iOS** | ✅ | ✅ | Frame kamera BGRA8888 ditangani terpisah dari Android |
+| **Web** | ✅ | ➖ | Turun ke foto selfie; butuh HTTPS & CORS |
+
+**Kenapa wajah tidak jalan di web:** ML Kit hanya punya implementasi
+Android/iOS, dan TensorFlow Lite memakai `dart:ffi` yang tidak ada di web.
+Keduanya diisolasi di balik `FaceEngine` dengan *conditional import*, sehingga
+aplikasi tetap bisa dikompilasi untuk web dan alur presensi tetap berfungsi
+memakai foto selfie sebagai bukti.
+
+---
+
+## 🚀 Menjalankan Proyek
+
+### Prasyarat
+
+- **Flutter** >= 3.27 (dikembangkan dengan 3.35.6)
+- **Dart** >= 3.5 (dikembangkan dengan 3.9.2)
+- **JDK 17** untuk build Android
+- Perangkat/emulator dengan kamera dan GPS
+
+### Langkah
+
+```bash
+flutter pub get
+
+# Kode freezed & flutter_gen dihasilkan otomatis
+dart run build_runner build
+
+flutter run
+```
+
+### Mengganti alamat server
+
+Alamat backend ada di satu tempat — `lib/core/constants/variables.dart`:
+
+```dart
+class Variables {
+  static const String appName = 'Absen Devtech KI';
+  static const String baseUrl = 'https://presensi-dev.pringsewukab.go.id';
+}
+```
+
+Nama aplikasi, logo, warna, tile peta, aturan foto/catatan, versi minimum, dan
+mode pemeliharaan **tidak perlu diubah di kode** — semuanya dibaca dari
+`GET /api/app-settings`.
+
+> Build rilis Android memaksa HTTPS. Untuk backend lokal berbasis `http://`,
+> jalankan build **debug** — cleartext hanya diizinkan di sana.
+
+### Izin platform
+
+Sudah dikonfigurasi di repo dan tidak perlu diubah:
+
+- **Android** — `android/app/src/main/AndroidManifest.xml`: kamera, lokasi,
+  notifikasi, dan alarm terjadwal.
+- **iOS** — `ios/Runner/Info.plist`: `NSCameraUsageDescription`,
+  `NSLocationWhenInUseUsageDescription`, `NSPhotoLibraryUsageDescription`,
+  dan lainnya.
+
+---
+
+## 🏗️ Arsitektur
+
+Clean Architecture dengan **BLoC** untuk state management.
+
+```
+lib/
+├── core/
+│   ├── config/          # AppConfig — pengaturan aplikasi dari API + cache lokal
+│   ├── network/         # ApiClient & ApiException (envelope, multipart, error)
+│   ├── theme/           # Tema Material 3 yang mengikuti warna dari API
+│   ├── ml/              # FaceEngine + implementasi native / unsupported
+│   ├── helper/          # Lokasi, info perangkat, notifikasi
+│   ├── components/      # Widget yang dipakai bersama
+│   ├── constants/       # Variables (baseUrl), warna
+│   └── extensions/      # Ekstensi Dart & BuildContext
+├── data/
+│   ├── datasources/     # Satu datasource per domain, semua lewat ApiClient
+│   └── models/          # Model request & response
+└── presentation/
+    ├── app/             # Layar pemeliharaan / wajib update, logo aplikasi
+    ├── auth/            # Splash & login
+    ├── home/            # Beranda, presensi, peta, kamera wajah, QR
+    ├── history/         # Riwayat, rekap bulanan, detail presensi
+    ├── leaves/          # Izin & cuti
+    ├── overtimes/       # Lembur
+    └── profile/         # Profil, ubah profil, ubah password
+```
+
+### Lapisan jaringan
+
+Seluruh request melewati `ApiClient` ([`lib/core/network/api_client.dart`](lib/core/network/api_client.dart)):
+
+- Membaca envelope baru `{success, message, data, meta}` **dan** key lama
+  (`attendance`, `user`, `company`, `checkedin`) sehingga kompatibel dengan
+  server yang belum diperbarui.
+- Endpoint baru punya **fallback otomatis ke alias lama** saat server menjawab
+  404 — mis. `/attendance/check-in` → `/checkin`.
+- Unggahan memakai **bytes**, bukan path berkas, agar jalur yang sama bekerja
+  di Android, iOS, dan web.
+- Memetakan kode status ke `ApiException` dengan pesan siap tampil:
+  401 sesi berakhir · 403 tidak berhak · 409 konflik keadaan · 422 validasi ·
+  429 terlalu banyak permintaan · 503 pemeliharaan.
+
+---
+
+## 🔄 Alur Aplikasi
+
+### Masuk
+
+1. **Splash** — muat `GET /api/app-settings`, terapkan nama/logo/warna.
+2. Cek **mode pemeliharaan** dan **versi minimum** → tampilkan layar penghalang
+   bila perlu.
+3. Cek sesi tersimpan → **Beranda** atau **Login**.
+
+### Presensi
+
+1. Ambil lokasi perangkat, panggil `GET /api/attendance/pre-check`.
+2. Peta menampilkan posisi, kantor terdekat, jarak, dan radius.
+3. Pilih mode kerja (bila lebih dari satu diizinkan).
+4. Ambil foto — dengan verifikasi wajah bila tersedia — dan isi catatan bila
+   diwajibkan.
+5. Kirim `check-in` / `check-out`; hasil dan pesan dari server ditampilkan.
+
+### Izin & Cuti
+
+1. Pilih jenis izin dan rentang tanggal, tulis alasan.
+2. Lampirkan berkas (opsional) — divalidasi format dan ukurannya lebih dulu.
+3. Kirim; pantau status, ubah, atau batalkan selagi masih `pending`.
+
+---
+
+## 🧪 Pengujian
+
+```bash
+flutter analyze   # harus bersih, tanpa error maupun warning
+flutter test      # unit test untuk model, parsing API, dan aturan validasi
+```
+
+Cakupan test saat ini berfokus pada logika yang paling mudah salah dan paling
+mahal bila salah: perbandingan versi untuk wajib-update, parsing pre-check dan
+riwayat, aturan wajib foto/catatan per mode kerja, penanganan tanggal lintas
+timezone, kompatibilitas respons lama dan baru, serta aturan password.
+
+---
+
+## 📦 Rilis
+
+Ringkasnya:
+
+```bash
+flutter build appbundle --release   # Play Store
+flutter build ipa --release         # App Store
+flutter build web --release         # Web
+```
+
+Build rilis Android memerlukan `android/key.properties` (salin dari
+`android/key.properties.example`). Tanpa berkas itu build tetap berhasil tetapi
+ditandatangani kunci debug dan **akan ditolak Play Console**.
+
+Langkah lengkap — pembuatan keystore, daftar periksa sebelum unggah, dan
+persyaratan Play Console — ada di [`docs/RELEASE.md`](docs/RELEASE.md).
+
+---
+
+## 🛠️ Teknologi
+
+| Area | Paket |
+| --- | --- |
+| State management | `flutter_bloc`, `bloc`, `freezed` |
+| Jaringan | `http`, `http_parser` |
+| Peta & lokasi | `flutter_map`, `latlong2`, `geolocator` |
+| Kamera & wajah | `camera`, `google_mlkit_face_detection`, `tflite_flutter`, `image` |
+| Berkas | `image_picker`, `file_picker`, `flutter_image_compress` |
+| Notifikasi | `flutter_local_notifications`, `timezone` |
+| Perangkat | `device_info_plus`, `package_info_plus` |
+| Penyimpanan | `shared_preferences`, `path_provider` |
+| Lainnya | `mobile_scanner`, `google_fonts`, `flutter_svg`, `intl`, `url_launcher`, `dartz` |
+
+Peta memakai `flutter_map` + OpenStreetMap, bukan Google Maps — berjalan di
+Android, iOS, dan web tanpa API key, dan penyedia tile-nya bisa diganti admin
+lewat `map.tile_url`.
+
+---
+
+## 👥 Tim
+
+- **Developer**: [Adnan](https://github.com/ZuzlifatulAdnan)
+
+---
+
+**Dibangun dengan ❤️ menggunakan Flutter**

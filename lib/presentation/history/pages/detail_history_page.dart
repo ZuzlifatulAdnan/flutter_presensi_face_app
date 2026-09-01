@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:flutter_absensi_app/presentation/history/widgets/attendance_evidence_card.dart';
+
 import '../../../core/core.dart';
 
 class DetailHistoryPage extends StatefulWidget {
@@ -224,7 +226,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                   child: Icon(
                     _getStatusIcon(widget.attendance.status),
                     size: 80,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -254,7 +256,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -268,7 +270,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
+                                color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
@@ -298,10 +300,10 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: statusColor.withOpacity(0.12),
+                                      color: statusColor.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: statusColor.withOpacity(0.3),
+                                        color: statusColor.withValues(alpha: 0.3),
                                       ),
                                     ),
                                     child: Text(
@@ -324,6 +326,14 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
 
                   const SpaceHeight(20),
 
+                  // Bukti presensi dari server: foto, catatan, alamat, jarak,
+                  // durasi kerja, dan indikator fake GPS.
+                  AttendanceEvidenceCard(attendance: widget.attendance),
+
+                  if (widget.attendance.checkIn != null ||
+                      widget.attendance.checkOut != null)
+                    const SpaceHeight(20),
+
                   // Unified Card with Time Records + Map + Location
                   Container(
                     width: double.infinity,
@@ -332,7 +342,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -436,7 +446,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                                         Marker(
                                           width: 70.0,
                                           height: 70.0,
-                                          point: LatLng(latIn!, lonIn!),
+                                          point: LatLng(latIn, lonIn),
                                           child: Column(
                                             children: [
                                               Container(
@@ -469,7 +479,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                                         Marker(
                                           width: 70.0,
                                           height: 70.0,
-                                          point: LatLng(latOut!, lonOut!),
+                                          point: LatLng(latOut, lonOut),
                                           child: Column(
                                             children: [
                                               Container(
@@ -557,7 +567,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -576,7 +586,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                   label,
                   style: GoogleFonts.poppins(
                     fontSize: 10,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                   ),
                 ),
                 const SpaceHeight(2),
@@ -600,7 +610,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -620,7 +630,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                   label,
                   style: GoogleFonts.poppins(
                     fontSize: 9,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                   ),
                 ),
                 Text(
@@ -647,7 +657,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -679,7 +689,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                            color.withOpacity(0.6)),
+                            color.withValues(alpha: 0.6)),
                       ),
                     ),
                     const SpaceWidth(6),
@@ -687,7 +697,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                       'Loading...',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: AppColors.black.withOpacity(0.4),
+                        color: AppColors.black.withValues(alpha: 0.4),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -698,7 +708,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                   address,
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: AppColors.black.withOpacity(0.6),
+                    color: AppColors.black.withValues(alpha: 0.6),
                     height: 1.4,
                   ),
                   maxLines: 2,
@@ -709,7 +719,7 @@ class _DetailHistoryPageState extends State<DetailHistoryPage> {
                   'Address not available',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: AppColors.black.withOpacity(0.3),
+                    color: AppColors.black.withValues(alpha: 0.3),
                     fontStyle: FontStyle.italic,
                   ),
                 ),

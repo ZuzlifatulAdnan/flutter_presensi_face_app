@@ -20,5 +20,15 @@ class LogoutBloc extends Bloc<LogoutEvent, LogoutState> {
         (r) => emit(const _Success()),
       );
     });
+
+    // `POST /api/logout-all` mencabut token di seluruh perangkat.
+    on<_LogoutAll>((event, emit) async {
+      emit(const _Loading());
+      final result = await _authRemoteDatasource.logoutAll();
+      result.fold(
+        (l) => emit(_Error(l)),
+        (r) => emit(const _Success()),
+      );
+    });
   }
 }

@@ -1,0 +1,13 @@
+# Salin berkas ini menjadi android/key.properties lalu isi dengan data
+# keystore rilis Anda. Berkas key.properties sengaja diabaikan git.
+#
+# Membuat keystore baru (sekali saja, simpan baik-baik — kehilangan berkas
+# ini membuat Anda tidak bisa memperbarui aplikasi di Play Store):
+#
+#   keytool -genkey -v -keystore upload-keystore.jks -storetype JKS \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+storePassword=ganti-dengan-password-keystore
+keyPassword=ganti-dengan-password-key
+keyAlias=upload
+storeFile=C:/path/ke/upload-keystore.jks

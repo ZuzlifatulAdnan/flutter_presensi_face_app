@@ -76,15 +76,15 @@ class _PermissionPageState extends State<PermissionPage> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 5),
                       ),
@@ -94,7 +94,7 @@ class _PermissionPageState extends State<PermissionPage> {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -124,7 +124,7 @@ class _PermissionPageState extends State<PermissionPage> {
                               'Submit permission request',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                               ),
                             ),
                           ],
@@ -149,7 +149,7 @@ class _PermissionPageState extends State<PermissionPage> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -259,7 +259,7 @@ class _PermissionPageState extends State<PermissionPage> {
                             icon: Icons.attach_file_rounded,
                             child: GestureDetector(
                               onTap: _pickImage,
-                              child: Container(
+                              child: SizedBox(
                                 width: double.infinity,
                                 child: imagePath == null
                                     ? Container(
@@ -270,7 +270,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                               BorderRadius.circular(16),
                                           border: Border.all(
                                             color: const Color(0xFF1e3c72)
-                                                .withOpacity(0.3),
+                                                .withValues(alpha: 0.3),
                                             width: 2,
                                           ),
                                         ),
@@ -284,9 +284,9 @@ class _PermissionPageState extends State<PermissionPage> {
                                                 gradient: LinearGradient(
                                                   colors: [
                                                     const Color(0xFF1e3c72)
-                                                        .withOpacity(0.1),
+                                                        .withValues(alpha: 0.1),
                                                     const Color(0xFF3b82c9)
-                                                        .withOpacity(0.1),
+                                                        .withValues(alpha: 0.1),
                                                   ],
                                                 ),
                                                 borderRadius:
@@ -328,7 +328,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                                   BorderRadius.circular(16),
                                               border: Border.all(
                                                 color: const Color(0xFF1e3c72)
-                                                    .withOpacity(0.3),
+                                                    .withValues(alpha: 0.3),
                                                 width: 2,
                                               ),
                                             ),
@@ -362,7 +362,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                                   boxShadow: [
                                                     BoxShadow(
                                                       color: Colors.black
-                                                          .withOpacity(0.2),
+                                                          .withValues(alpha: 0.2),
                                                       blurRadius: 4,
                                                       offset:
                                                           const Offset(0, 2),
@@ -471,7 +471,7 @@ class _PermissionPageState extends State<PermissionPage> {
                                       boxShadow: [
                                         BoxShadow(
                                           color: const Color(0xFF1e3c72)
-                                              .withOpacity(0.3),
+                                              .withValues(alpha: 0.3),
                                           blurRadius: 12,
                                           offset: const Offset(0, 4),
                                         ),

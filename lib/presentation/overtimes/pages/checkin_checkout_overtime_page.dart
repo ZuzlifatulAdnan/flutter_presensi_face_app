@@ -189,7 +189,6 @@ class _CheckInCheckOutOvertimePageState
       barrierDismissible: false,
       builder: (BuildContext context) {
         final now = DateTime.now();
-        final dateFormatter = DateFormat('dd MMMM yyyy', 'id_ID');
         final timeFormatter = DateFormat('HH:mm');
         final confirmationLabel = isCheckIn ? 'Waktu Mulai' : 'Waktu Selesai';
         final confirmationValue = isCheckIn
@@ -614,9 +613,9 @@ class _CheckInCheckOutOvertimePageState
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: IconButton(
               icon: const Icon(
@@ -646,7 +645,7 @@ class _CheckInCheckOutOvertimePageState
                       : 'Record your overtime end',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -697,11 +696,11 @@ class _CheckInCheckOutOvertimePageState
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColors.light.withOpacity(0.3),
+              color: AppColors.light.withValues(alpha: 0.3),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -829,7 +828,7 @@ class _CheckInCheckOutOvertimePageState
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -896,19 +895,19 @@ class _CheckInCheckOutOvertimePageState
         hintText: 'Add any notes about this overtime...',
         hintStyle: GoogleFonts.poppins(
           fontSize: 14,
-          color: AppColors.grey.withOpacity(0.6),
+          color: AppColors.grey.withValues(alpha: 0.6),
         ),
         helperText: 'Optional - Maximum 255 characters',
         helperStyle: GoogleFonts.poppins(fontSize: 11, color: AppColors.grey),
         filled: true,
-        fillColor: AppColors.light.withOpacity(0.3),
+        fillColor: AppColors.light.withValues(alpha: 0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+          borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+          borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -928,19 +927,19 @@ class _CheckInCheckOutOvertimePageState
         hintText: 'Explain the reason for overtime...',
         hintStyle: GoogleFonts.poppins(
           fontSize: 14,
-          color: AppColors.grey.withOpacity(0.6),
+          color: AppColors.grey.withValues(alpha: 0.6),
         ),
         helperText: 'Required - Maximum 255 characters',
         helperStyle: GoogleFonts.poppins(fontSize: 11, color: AppColors.grey),
         filled: true,
-        fillColor: AppColors.light.withOpacity(0.3),
+        fillColor: AppColors.light.withValues(alpha: 0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+          borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.light.withOpacity(0.5)),
+          borderSide: BorderSide(color: AppColors.light.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -961,10 +960,10 @@ class _CheckInCheckOutOvertimePageState
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.light.withOpacity(0.3),
+          color: AppColors.light.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppColors.light.withOpacity(0.5),
+            color: AppColors.light.withValues(alpha: 0.5),
           ),
         ),
         child: Row(
@@ -972,7 +971,7 @@ class _CheckInCheckOutOvertimePageState
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(

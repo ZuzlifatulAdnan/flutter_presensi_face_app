@@ -52,6 +52,7 @@ extension LogoutEventPatterns on LogoutEvent {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Started value)? started,
     TResult Function(_Logout value)? logout,
+    TResult Function(_LogoutAll value)? logoutAll,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -60,6 +61,8 @@ extension LogoutEventPatterns on LogoutEvent {
         return started(_that);
       case _Logout() when logout != null:
         return logout(_that);
+      case _LogoutAll() when logoutAll != null:
+        return logoutAll(_that);
       case _:
         return orElse();
     }
@@ -82,6 +85,7 @@ extension LogoutEventPatterns on LogoutEvent {
   TResult map<TResult extends Object?>({
     required TResult Function(_Started value) started,
     required TResult Function(_Logout value) logout,
+    required TResult Function(_LogoutAll value) logoutAll,
   }) {
     final _that = this;
     switch (_that) {
@@ -89,6 +93,8 @@ extension LogoutEventPatterns on LogoutEvent {
         return started(_that);
       case _Logout():
         return logout(_that);
+      case _LogoutAll():
+        return logoutAll(_that);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -110,6 +116,7 @@ extension LogoutEventPatterns on LogoutEvent {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Started value)? started,
     TResult? Function(_Logout value)? logout,
+    TResult? Function(_LogoutAll value)? logoutAll,
   }) {
     final _that = this;
     switch (_that) {
@@ -117,6 +124,8 @@ extension LogoutEventPatterns on LogoutEvent {
         return started(_that);
       case _Logout() when logout != null:
         return logout(_that);
+      case _LogoutAll() when logoutAll != null:
+        return logoutAll(_that);
       case _:
         return null;
     }
@@ -138,6 +147,7 @@ extension LogoutEventPatterns on LogoutEvent {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? started,
     TResult Function()? logout,
+    TResult Function()? logoutAll,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -146,6 +156,8 @@ extension LogoutEventPatterns on LogoutEvent {
         return started();
       case _Logout() when logout != null:
         return logout();
+      case _LogoutAll() when logoutAll != null:
+        return logoutAll();
       case _:
         return orElse();
     }
@@ -168,6 +180,7 @@ extension LogoutEventPatterns on LogoutEvent {
   TResult when<TResult extends Object?>({
     required TResult Function() started,
     required TResult Function() logout,
+    required TResult Function() logoutAll,
   }) {
     final _that = this;
     switch (_that) {
@@ -175,6 +188,8 @@ extension LogoutEventPatterns on LogoutEvent {
         return started();
       case _Logout():
         return logout();
+      case _LogoutAll():
+        return logoutAll();
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -196,6 +211,7 @@ extension LogoutEventPatterns on LogoutEvent {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? started,
     TResult? Function()? logout,
+    TResult? Function()? logoutAll,
   }) {
     final _that = this;
     switch (_that) {
@@ -203,6 +219,8 @@ extension LogoutEventPatterns on LogoutEvent {
         return started();
       case _Logout() when logout != null:
         return logout();
+      case _LogoutAll() when logoutAll != null:
+        return logoutAll();
       case _:
         return null;
     }
@@ -246,6 +264,26 @@ class _Logout implements LogoutEvent {
   @override
   String toString() {
     return 'LogoutEvent.logout()';
+  }
+}
+
+/// @nodoc
+
+class _LogoutAll implements LogoutEvent {
+  const _LogoutAll();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _LogoutAll);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'LogoutEvent.logoutAll()';
   }
 }
 
