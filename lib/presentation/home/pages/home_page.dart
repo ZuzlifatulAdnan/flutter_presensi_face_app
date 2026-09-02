@@ -26,6 +26,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String? faceEmbedding;
+
+  /// Mode kerja pengguna menentukan apakah menu WFH/WFA ditampilkan.
+  /// Server tetap memvalidasi ulang lewat `pre-check` saat menu dibuka.
+  bool _remoteAllowed = false;
   double? latitude;
   double? longitude;
   String? _currentLocationAddress;
@@ -51,6 +55,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     context.read<GetUserBloc>().add(const GetUserEvent.getUser());
 
     getCurrentPosition();
+    _loadRemoteAvailability();
     _startAnimations();
   }
 
@@ -141,6 +146,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     setState(() => _currentLocationAddress = address);
   }
 
+  /// WFH/WFA hanya relevan bila admin memberi pengguna mode kerja jarak jauh
+  /// (`users.work_mode` bernilai `wfh` atau `wfa`).
+  Future<void> _loadRemoteAvailability() async {
+    final authData = await AuthLocalDatasource().getAuthData();
+    final mode = (authData?.user?.workMode ?? authData?.workMode ?? 'wfo')
+        .toLowerCase()
+        .replaceAll('-', '_');
+    if (!mounted) return;
+    setState(() => _remoteAllowed = mode == 'wfh' || mode == 'wfa');
+  }
+
   Future<void> _initializeFaceEmbedding() async {
     try {
       final authData = await AuthLocalDatasource().getAuthData();
@@ -164,6 +180,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // Refresh face embedding
     await _initializeFaceEmbedding();
+    await _loadRemoteAvailability();
     await getCurrentPosition();
 
     // Wait a bit for the blocs to process
@@ -899,8 +916,128 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ],
           ),
+
+          // Presensi jarak jauh punya pintu masuk sendiri: aturannya berbeda
+          // (tanpa validasi radius, wajib foto & catatan aktivitas), jadi
+          // digabung ke tombol absen biasa hanya akan membingungkan.
+          if (_remoteAllowed) ...[
+            const SpaceHeight(20),
+            _buildRemoteAttendanceCard(),
+          ],
         ],
       ),
+    );
+  }
+
+  /// Kartu presensi WFH/WFA — terpisah dari tombol absen kantor.
+  Widget _buildRemoteAttendanceCard() {
+    return BlocBuilder<IsCheckedinBloc, IsCheckedinState>(
+      builder: (context, state) {
+        final isCheckedin = state.maybeWhen(
+          orElse: () => false,
+          success: (data) => data.isCheckedin,
+        );
+        final isCheckedout = state.maybeWhen(
+          orElse: () => false,
+          success: (data) => data.isCheckedout,
+        );
+
+        // Kartu ini khusus memulai hari kerja jarak jauh. Absen pulang tidak
+        // bergantung mode — server memakai mode dari data absen masuk — jadi
+        // jalurnya tetap lewat tombol "Absen Pulang" agar tidak ada dua pintu
+        // untuk tindakan yang sama.
+        final done = isCheckedin && isCheckedout;
+        final label = done
+            ? 'Presensi Hari Ini Selesai'
+            : (isCheckedin ? 'Sudah Absen Masuk' : 'Absen Masuk WFH/WFA');
+        final subtitle = done
+            ? 'Absen masuk dan pulang sudah tercatat'
+            : (isCheckedin
+                ? 'Gunakan tombol Absen Pulang untuk mengakhiri hari kerja'
+                : 'Presensi dari rumah atau mana saja, dengan foto dan '
+                    'catatan aktivitas');
+        final disabled = done || isCheckedin;
+
+        return Opacity(
+          opacity: disabled ? 0.55 : 1,
+          child: GestureDetector(
+            onTap: disabled
+                ? null
+                : () => _openAttendance(
+                      attendanceType: 'location_based_only',
+                      scope: AttendanceScope.remote,
+                    ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7B4DFF), Color(0xFF9E6BFF)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF7B4DFF).withValues(alpha: 0.3),
+                    blurRadius: 14,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.home_work_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SpaceWidth(16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SpaceHeight(2),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w400,
+                            height: 1.35,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!disabled)
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -927,8 +1064,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               isCheckIn: isCheckIn,
               isCheckedin: isCheckedin,
               isCheckout: isCheckout,
-              onPressed: () =>
-                  _openAttendance(attendanceType: attendanceType),
+              onPressed: () => _openAttendance(
+                attendanceType: attendanceType,
+                scope: AttendanceScope.office,
+              ),
             );
           },
         );
@@ -942,7 +1081,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   /// foto/catatan — kini ditentukan server lewat `GET /api/attendance/pre-check`
   /// dan ditampilkan di [AttendancePage], jadi aplikasi tidak lagi menebak
   /// aturannya sendiri.
-  Future<void> _openAttendance({required String attendanceType}) async {
+  Future<void> _openAttendance({
+    required String attendanceType,
+    required AttendanceScope scope,
+  }) async {
     // Pengenalan wajah tetap butuh wajah terdaftar sebelum kamera dibuka.
     final needsFace = attendanceType == 'pengenalan_wajah_saja' ||
         attendanceType == 'face_recognition_only' ||
@@ -955,7 +1097,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     await _checkBackendAndNavigate(() {
-      context.push(const AttendancePage()).then((_) {
+      context.push(AttendancePage(scope: scope)).then((_) {
         if (mounted) _onRefresh();
       });
     });

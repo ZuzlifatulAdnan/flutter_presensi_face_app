@@ -38,14 +38,27 @@ versi minimum, dan mode pemeliharaan **diambil dari API** lewat
 
 ### 📍 Presensi WFO / WFH / WFA
 
+Beranda punya **dua pintu masuk terpisah**, karena aturannya memang berbeda:
+
+| Menu | Mode | Validasi radius | Foto & catatan |
+| --- | --- | :---: | --- |
+| **Absen Masuk / Absen Pulang** | WFO | ✅ wajib di dalam radius kantor | sesuai `photo_required` |
+| **Absen Masuk WFH/WFA** (kartu tersendiri) | WFH / WFA | ➖ tidak divalidasi | foto & catatan aktivitas umumnya wajib |
+
+Kartu WFH/WFA hanya muncul bila admin memberi akun mode kerja jarak jauh, dan
+khusus untuk **memulai** hari kerja. Absen pulang tidak bergantung mode —
+server memakai mode dari data absen masuk — jadi jalurnya tetap satu lewat
+tombol *Absen Pulang*.
+
 Seluruh alur presensi ditentukan satu request `GET /api/attendance/pre-check`,
 jadi aplikasi tidak menebak aturan sendiri dan server tetap memvalidasi ulang:
 
 - **Peta pra-presensi** — posisi pengguna, pin kantor, dan lingkaran radius
   (hijau bila di dalam radius, merah bila di luar) memakai tile yang
   dikonfigurasi admin.
-- **Pilihan mode kerja** hanya menampilkan mode yang diizinkan untuk akun ini.
-  Saat absen pulang, mode terkunci mengikuti data absen masuk.
+- **Pilihan mode kerja** hanya menampilkan mode yang diizinkan untuk akun ini
+  **dan** sesuai pintu masuk yang dipakai. Saat absen pulang, mode terkunci
+  mengikuti data absen masuk.
 - **Foto bukti** dan **catatan aktivitas** muncul dan diwajibkan sesuai aturan
   dari server (`photo_required`, `remote_photo_required`, `remote_notes_required`).
 - **Deteksi fake GPS**, akurasi GPS, alamat hasil reverse geocoding, dan info
@@ -221,12 +234,17 @@ Seluruh request melewati `ApiClient` ([`lib/core/network/api_client.dart`](lib/c
 
 ### Presensi
 
-1. Ambil lokasi perangkat, panggil `GET /api/attendance/pre-check`.
-2. Peta menampilkan posisi, kantor terdekat, jarak, dan radius.
-3. Pilih mode kerja (bila lebih dari satu diizinkan).
-4. Ambil foto — dengan verifikasi wajah bila tersedia — dan isi catatan bila
+1. Pilih pintu masuk di beranda: **Absen Masuk** (kantor) atau kartu
+   **Absen Masuk WFH/WFA** (jarak jauh).
+2. Ambil lokasi perangkat, panggil `GET /api/attendance/pre-check`.
+3. Peta menampilkan posisi dan lokasi kantor. Untuk presensi kantor, jarak dan
+   radius ditonjolkan; untuk WFH/WFA ditampilkan catatan bahwa radius tidak
+   divalidasi.
+4. Pilih jenis mode kerja bila pintu tersebut menawarkan lebih dari satu
+   (mis. WFH dan WFA).
+5. Ambil foto — dengan verifikasi wajah bila tersedia — dan isi catatan bila
    diwajibkan.
-5. Kirim `check-in` / `check-out`; hasil dan pesan dari server ditampilkan.
+6. Kirim `check-in` / `check-out`; hasil dan pesan dari server ditampilkan.
 
 ### Izin & Cuti
 

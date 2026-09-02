@@ -142,6 +142,31 @@ void main() {
     });
   });
 
+  group('Pemisahan mode kerja per pintu masuk', () {
+    // Beranda punya dua pintu: tombol absen kantor dan tombol WFH/WFA.
+    // Pemisahannya bertumpu pada WorkMode.isRemote, jadi dikunci di sini.
+    test('hanya WFO yang dianggap presensi kantor', () {
+      expect(WorkMode.wfo.isRemote, isFalse);
+      expect(WorkMode.wfh.isRemote, isTrue);
+      expect(WorkMode.wfa.isRemote, isTrue);
+    });
+
+    test('menyaring mode yang diizinkan sesuai pintu masuk', () {
+      const allowed = [WorkMode.wfo, WorkMode.wfh, WorkMode.wfa];
+
+      final office = allowed.where((m) => !m.isRemote).toList();
+      final remote = allowed.where((m) => m.isRemote).toList();
+
+      expect(office, [WorkMode.wfo]);
+      expect(remote, [WorkMode.wfh, WorkMode.wfa]);
+    });
+
+    test('akun WFO tidak menyisakan pilihan untuk pintu jarak jauh', () {
+      const allowed = [WorkMode.wfo];
+      expect(allowed.where((m) => m.isRemote), isEmpty);
+    });
+  });
+
   group('AttendanceLocation.distanceLabel', () {
     test('memakai meter di bawah 1 km dan kilometer di atasnya', () {
       const near = AttendanceLocation(

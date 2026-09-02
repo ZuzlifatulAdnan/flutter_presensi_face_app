@@ -21,13 +21,37 @@ import 'package:flutter_absensi_app/presentation/home/pages/attendance_success_p
 import 'package:flutter_absensi_app/presentation/home/widgets/attendance_map.dart';
 import 'package:flutter_absensi_app/presentation/home/widgets/work_mode_selector.dart';
 
+/// Ruang lingkup presensi yang dibuka dari beranda.
+///
+/// Beranda punya dua pintu masuk terpisah supaya pengguna tidak perlu memilih
+/// mode kerja di dalam satu halaman yang sama: tombol absen biasa untuk di
+/// kantor, dan tombol WFH/WFA untuk kerja jarak jauh.
+enum AttendanceScope {
+  /// Presensi dari kantor (WFO) — divalidasi radius lokasi.
+  office,
+
+  /// Presensi jarak jauh (WFH/WFA) — tanpa validasi radius, tetapi foto dan
+  /// catatan aktivitas biasanya diwajibkan.
+  remote;
+
+  bool get isRemote => this == AttendanceScope.remote;
+
+  String get title => switch (this) {
+        AttendanceScope.office => 'Presensi Kantor',
+        AttendanceScope.remote => 'Presensi WFH/WFA',
+      };
+}
+
 /// Halaman presensi: peta, kelayakan, mode kerja, bukti foto, dan catatan.
 ///
 /// Seluruh aturan diambil dari `GET /api/attendance/pre-check` — label tombol,
 /// aktif/tidaknya tombol, mode kerja yang boleh dipilih, dan wajib-tidaknya
 /// foto & catatan. Server tetap memvalidasi ulang saat presensi dikirim.
 class AttendancePage extends StatefulWidget {
-  const AttendancePage({super.key});
+  /// Membatasi mode kerja yang ditawarkan halaman ini.
+  final AttendanceScope scope;
+
+  const AttendancePage({super.key, this.scope = AttendanceScope.office});
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
@@ -127,15 +151,39 @@ class _AttendancePageState extends State<AttendancePage> {
     _serverTimeSyncedAt = data.serverTime == null ? null : DateTime.now();
 
     // Mode default hanya diterapkan sekali, atau saat pilihan lama tidak lagi
-    // diizinkan server (mis. admin mematikan WFH).
-    final allowed = data.workMode.allowed;
+    // sesuai (server mencabut izin WFH, atau halaman dibuka dari pintu lain).
+    final allowed = _modesFor(data);
     if (_selectedMode == null || !allowed.contains(_selectedMode)) {
-      _selectedMode = data.effectiveDefaultMode;
+      _selectedMode = allowed.isEmpty ? null : allowed.first;
     }
   }
 
-  WorkMode _modeFor(AttendancePreCheck data) =>
-      _selectedMode ?? data.effectiveDefaultMode;
+  /// Mode kerja yang ditawarkan halaman ini.
+  ///
+  /// Saat absen pulang, mode terkunci ke mode absen masuk sehingga scope
+  /// halaman tidak berlaku — server yang menentukan.
+  List<WorkMode> _modesFor(AttendancePreCheck data) {
+    if (data.nextAction == NextAction.checkOut) return const [];
+
+    final allowed = data.workMode.allowed;
+    return allowed
+        .where((mode) => mode.isRemote == widget.scope.isRemote)
+        .toList();
+  }
+
+  WorkMode _modeFor(AttendancePreCheck data) {
+    if (data.nextAction == NextAction.checkOut) {
+      return data.effectiveDefaultMode;
+    }
+    final allowed = _modesFor(data);
+    final selected = _selectedMode;
+    if (selected != null && allowed.contains(selected)) return selected;
+    return allowed.isEmpty ? data.effectiveDefaultMode : allowed.first;
+  }
+
+  /// Scope ini tidak tersedia untuk akun pengguna.
+  bool _scopeUnavailable(AttendancePreCheck data) =>
+      data.nextAction != NextAction.checkOut && _modesFor(data).isEmpty;
 
   Future<void> _capturePhoto(AttendancePreCheck data) async {
     // Verifikasi wajah hanya ditawarkan bila mesin wajah tersedia; di web
@@ -278,7 +326,16 @@ class _AttendancePageState extends State<AttendancePage> {
       ],
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Presensi'),
+          title: BlocBuilder<AttendancePrecheckBloc, AttendancePrecheckState>(
+            builder: (context, state) => Text(
+              state.maybeWhen(
+                loaded: (data, _) => data.nextAction == NextAction.checkOut
+                    ? 'Absen Pulang · ${data.effectiveDefaultMode.label}'
+                    : widget.scope.title,
+                orElse: () => widget.scope.title,
+              ),
+            ),
+          ),
           actions: [
             IconButton(
               tooltip: 'Perbarui lokasi',
@@ -339,6 +396,9 @@ class _AttendancePageState extends State<AttendancePage> {
           maxChildSize: 0.92,
           builder: (context, scrollController) => _AttendanceSheet(
             data: data,
+            scope: widget.scope,
+            availableModes: _modesFor(data),
+            scopeUnavailable: _scopeUnavailable(data),
             scrollController: scrollController,
             location: _location,
             locationError: _locationError,
@@ -363,6 +423,9 @@ class _AttendancePageState extends State<AttendancePage> {
 /// Isi sheet: status, jarak, blocker, mode kerja, bukti foto, catatan, tombol.
 class _AttendanceSheet extends StatelessWidget {
   final AttendancePreCheck data;
+  final AttendanceScope scope;
+  final List<WorkMode> availableModes;
+  final bool scopeUnavailable;
   final ScrollController scrollController;
   final UserLocation? location;
   final String? locationError;
@@ -377,6 +440,9 @@ class _AttendanceSheet extends StatelessWidget {
 
   const _AttendanceSheet({
     required this.data,
+    required this.scope,
+    required this.availableModes,
+    required this.scopeUnavailable,
     required this.scrollController,
     required this.location,
     required this.locationError,
@@ -395,7 +461,7 @@ class _AttendanceSheet extends StatelessWidget {
     final photoRequired = data.requirements.photoRequiredFor(selectedMode);
     final notesRequired = data.nextAction == NextAction.checkIn &&
         data.requirements.notesRequiredFor(selectedMode);
-    final modes = data.selectableModes;
+    final modes = availableModes;
 
     return Container(
       decoration: const BoxDecoration(
@@ -421,7 +487,18 @@ class _AttendanceSheet extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          _NearestLocationTile(data: data),
+          if (scopeUnavailable)
+            const _Notice(
+              icon: Icons.lock_outline_rounded,
+              color: AppTheme.danger,
+              message: 'Akun Anda belum diizinkan melakukan presensi jarak '
+                  'jauh. Gunakan menu presensi kantor, atau hubungi admin '
+                  'untuk mengubah mode kerja Anda.',
+            )
+          else if (scope.isRemote)
+            const _RemoteInfoTile()
+          else
+            _NearestLocationTile(data: data),
           const SizedBox(height: 12),
 
           if (location != null)
@@ -462,7 +539,9 @@ class _AttendanceSheet extends StatelessWidget {
 
           if (modes.length > 1) ...[
             const SizedBox(height: 20),
-            const _SectionTitle('Mode Kerja'),
+            _SectionTitle(
+              scope.isRemote ? 'Jenis Kerja Jarak Jauh' : 'Mode Kerja',
+            ),
             const SizedBox(height: 10),
             WorkModeSelector(
               modes: modes,
@@ -503,7 +582,11 @@ class _AttendanceSheet extends StatelessWidget {
           ],
 
           const SizedBox(height: 24),
-          _ActionButton(data: data, onPressed: onSubmit),
+          _ActionButton(
+            data: data,
+            enabled: !scopeUnavailable,
+            onPressed: onSubmit,
+          ),
         ],
       ),
     );
@@ -512,9 +595,14 @@ class _AttendanceSheet extends StatelessWidget {
 
 class _ActionButton extends StatelessWidget {
   final AttendancePreCheck data;
+  final bool enabled;
   final VoidCallback onPressed;
 
-  const _ActionButton({required this.data, required this.onPressed});
+  const _ActionButton({
+    required this.data,
+    required this.enabled,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -525,12 +613,12 @@ class _ActionButton extends StatelessWidget {
           (bloc) => bloc.state.maybeWhen(loading: () => true, orElse: () => false),
         );
 
-    final enabled = data.actionEnabled && !submitting;
+    final canSubmit = enabled && data.actionEnabled && !submitting;
 
     return Column(
       children: [
         FilledButton.icon(
-          onPressed: enabled ? onPressed : null,
+          onPressed: canSubmit ? onPressed : null,
           icon: submitting
               ? const SizedBox(
                   width: 18,
@@ -557,6 +645,53 @@ class _ActionButton extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Penjelas untuk presensi jarak jauh.
+///
+/// Radius kantor tidak divalidasi pada WFH/WFA, jadi indikator merah/hijau
+/// dari [_NearestLocationTile] justru menyesatkan di sini.
+class _RemoteInfoTile extends StatelessWidget {
+  const _RemoteInfoTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.info.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        border: Border.all(color: AppTheme.info.withValues(alpha: 0.25)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.home_work_rounded, color: AppTheme.info),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Presensi Jarak Jauh',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Tidak divalidasi radius kantor. Lokasi, foto, dan catatan '
+                  'aktivitas Anda tetap dicatat sebagai bukti.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppTheme.info,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
