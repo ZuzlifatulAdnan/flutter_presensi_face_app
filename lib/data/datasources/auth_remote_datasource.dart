@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_absensi_app/core/config/app_config.dart';
 import 'package:flutter_absensi_app/core/helper/device_info_helper.dart';
@@ -60,6 +61,16 @@ class AuthRemoteDatasource {
       return Right(AuthResponseModel.fromMap(raw));
     } on ApiException catch (e) {
       return Left(e.message);
+    } catch (e, stack) {
+      // Galat di luar HTTP — biasanya bentuk respons yang tidak terduga saat
+      // dipetakan ke model. Tanpa ini kegagalan tidak pernah sampai ke bloc
+      // dan tombol masuk berputar selamanya.
+      debugPrint('[Login] gagal memproses respons: $e\n$stack');
+      return Left(
+        kDebugMode
+            ? 'Gagal memproses data dari server: $e'
+            : 'Gagal memproses data dari server. Coba lagi.',
+      );
     }
   }
 

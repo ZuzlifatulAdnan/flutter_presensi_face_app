@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_absensi_app/data/models/response/company_response_model.dart';
+import 'package:flutter_absensi_app/data/models/response/json_value.dart';
 
 class AuthResponseModel {
     final User? user;
@@ -30,15 +31,15 @@ class AuthResponseModel {
     String toJson() => json.encode(toMap());
 
     factory AuthResponseModel.fromMap(Map<String, dynamic> json) => AuthResponseModel(
-        user: json["user"] == null ? null : User.fromMap(json["user"]),
-        token: json["token"],
-        role: json["role"],
-        workMode: json["work_mode"],
-        company: json["company"] == null ? null : Company.fromMap(json["company"]),
-        position: json["position"] == null ? null : Position.fromMap(json["position"]),
-        defaultShift: json["default_shift"] == null ? null : DefaultShift.fromMap(json["default_shift"]),
-        defaultShiftDetail: json["default_shift_detail"] == null ? null : DefaultShiftDetail.fromMap(json["default_shift_detail"]),
-        department: json["department"] == null ? null : Department.fromMap(json["department"]),
+        user: asModel(json["user"], User.fromMap),
+        token: asString(json["token"]),
+        role: asString(json["role"]),
+        workMode: asString(json["work_mode"]),
+        company: asModel(json["company"], Company.fromMap),
+        position: asModel(json["position"], Position.fromMap),
+        defaultShift: asModel(json["default_shift"], DefaultShift.fromMap),
+        defaultShiftDetail: asModel(json["default_shift_detail"], DefaultShiftDetail.fromMap),
+        department: asModel(json["department"], Department.fromMap),
     );
 
     Map<String, dynamic> toMap() => {
@@ -134,29 +135,31 @@ class User {
     String toJson() => json.encode(toMap());
 
     factory User.fromMap(Map<String, dynamic> json) => User(
-        id: json["id"],
-        name: json["name"],
-        email: json["email"],
-        workMode: json["work_mode"],
-        companyId: json["company_id"],
-        emailVerifiedAt: json["email_verified_at"] == null ? null : DateTime.parse(json["email_verified_at"]),
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
+        email: asString(json["email"]),
+        workMode: asString(json["work_mode"]),
+        companyId: asInt(json["company_id"]),
+        emailVerifiedAt: asDate(json["email_verified_at"]),
         twoFactorSecret: json["two_factor_secret"],
         twoFactorRecoveryCodes: json["two_factor_recovery_codes"],
         twoFactorConfirmedAt: json["two_factor_confirmed_at"],
         fcmToken: json["fcm_token"],
-        createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
-        phone: json["phone"],
-        role: json["role"],
-        position: json["position"],
-        department: json["department"],
-        jabatanId: json["jabatan_id"],
-        departemenId: json["departemen_id"],
-        shiftKerjaId: json["shift_kerja_id"],
+        createdAt: asDate(json["created_at"]),
+        updatedAt: asDate(json["updated_at"]),
+        phone: asString(json["phone"]),
+        // `role`, `position`, dan `department` bisa berupa teks atau objek
+        // relasi `{id, name}` tergantung endpoint; keduanya dibaca sebagai nama.
+        role: asString(json["role"]),
+        position: asString(json["position"]),
+        department: asString(json["department"]),
+        jabatanId: asInt(json["jabatan_id"]),
+        departemenId: asInt(json["departemen_id"]),
+        shiftKerjaId: asInt(json["shift_kerja_id"]),
         faceEmbedding: json["face_embedding"],
         imageUrl: json["image_url"],
-        shiftKerja: json["shift_kerja"] == null ? null : ShiftKerja.fromMap(json["shift_kerja"]),
-        departemen: json["departemen"] == null ? null : Departemen.fromMap(json["departemen"]),
+        shiftKerja: asModel(json["shift_kerja"], ShiftKerja.fromMap),
+        departemen: asModel(json["departemen"], Departemen.fromMap),
     );
 
     Map<String, dynamic> toMap() => {
@@ -216,16 +219,16 @@ class ShiftKerja {
     String toJson() => json.encode(toMap());
 
     factory ShiftKerja.fromMap(Map<String, dynamic> json) => ShiftKerja(
-        id: json["id"],
-        name: json["name"],
-        startTime: json["start_time"],
-        endTime: json["end_time"],
-        isCrossDay: json["is_cross_day"],
-        gracePeriodMinutes: json["grace_period_minutes"],
-        isActive: json["is_active"],
-        description: json["description"],
-        createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
+        startTime: asString(json["start_time"]),
+        endTime: asString(json["end_time"]),
+        isCrossDay: asBool(json["is_cross_day"]),
+        gracePeriodMinutes: asInt(json["grace_period_minutes"]),
+        isActive: asBool(json["is_active"]),
+        description: asString(json["description"]),
+        createdAt: asDate(json["created_at"]),
+        updatedAt: asDate(json["updated_at"]),
     );
 
     Map<String, dynamic> toMap() => {
@@ -262,11 +265,11 @@ class Departemen {
     String toJson() => json.encode(toMap());
 
     factory Departemen.fromMap(Map<String, dynamic> json) => Departemen(
-        id: json["id"],
-        name: json["name"],
-        description: json["description"],
-        createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null ? null : DateTime.parse(json["updated_at"]),
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
+        description: asString(json["description"]),
+        createdAt: asDate(json["created_at"]),
+        updatedAt: asDate(json["updated_at"]),
     );
 
     Map<String, dynamic> toMap() => {
@@ -292,8 +295,8 @@ class DefaultShift {
     String toJson() => json.encode(toMap());
 
     factory DefaultShift.fromMap(Map<String, dynamic> json) => DefaultShift(
-        id: json["id"],
-        name: json["name"],
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
     );
 
     Map<String, dynamic> toMap() => {
@@ -320,10 +323,10 @@ class DefaultShiftDetail {
     String toJson() => json.encode(toMap());
 
     factory DefaultShiftDetail.fromMap(Map<String, dynamic> json) => DefaultShiftDetail(
-        id: json["id"],
-        name: json["name"],
-        startTime: json["start_time"],
-        endTime: json["end_time"],
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
+        startTime: asString(json["start_time"]),
+        endTime: asString(json["end_time"]),
     );
 
     Map<String, dynamic> toMap() => {
@@ -348,8 +351,8 @@ class Department {
     String toJson() => json.encode(toMap());
 
     factory Department.fromMap(Map<String, dynamic> json) => Department(
-        id: json["id"],
-        name: json["name"],
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
     );
 
     Map<String, dynamic> toMap() => {
@@ -372,8 +375,8 @@ class Position {
     String toJson() => json.encode(toMap());
 
     factory Position.fromMap(Map<String, dynamic> json) => Position(
-        id: json["id"],
-        name: json["name"],
+        id: asInt(json["id"]),
+        name: asString(json["name"]),
     );
 
     Map<String, dynamic> toMap() => {
